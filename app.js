@@ -28,6 +28,7 @@ const STR = {
     cloudOk: '☁️ បានភ្ជាប់ Cloud', cloudErr: '⚠️ ភ្ជាប់ Cloud មិនបាន', cloudLoading: 'កំពុងភ្ជាប់...',
     confirmDel: 'លុបគ្រូនេះមែនទេ?', confirmReset: 'កំណត់ថ្ងៃបានប្រគល់ទាំងអស់ឲ្យទៅទទេមែនទេ?', confirmClear: 'លុបគ្រូទាំងអស់មែនទេ? មិនអាចត្រឡប់វិញបានទេ!',
     importDone: 'បញ្ចូលរួច', noRows: 'File គ្មានទិន្នន័យ', viewerNo: 'អ្នកមើលមិនអាចកែប្រែបានទេ',
+    signOut: 'ត្រឡប់ទៅចូលប្រើ',
     chartTitle: 'សមាមាត្រតាមមុខវិជ្ជា', lgOn: 'រួច', lgLate: 'យឺត', lgNot: 'មិនទាន់'
   },
   en: {
@@ -55,6 +56,7 @@ const STR = {
     cloudOk: '☁️ Cloud connected', cloudErr: '⚠️ Cloud connection failed', cloudLoading: 'Connecting...',
     confirmDel: 'Delete this teacher?', confirmReset: 'Clear all submission dates?', confirmClear: 'Delete ALL teachers? This cannot be undone!',
     importDone: 'Imported', noRows: 'File has no rows', viewerNo: 'View-only access',
+    signOut: 'Back to sign-in',
     chartTitle: 'Status by subject', lgOn: 'On time', lgLate: 'Late', lgNot: 'Not submitted'
   }
 };
@@ -506,6 +508,12 @@ $('gateForm').addEventListener('submit', async e => {
     $('gatePass').value = '';
     $('gatePass').focus();
   }
+});
+
+// Back to the sign-in screen (admin or view only) from any mode.
+$('signOutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem(AUTH_KEY);
+  location.reload();
 });
 
 // "View only" needs no password: entering it gives read-only access.
