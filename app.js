@@ -372,12 +372,55 @@ $('themeBtn').onclick = () => {
   applyStatic();
 };
 
+// Imports the school's full schedule workbook (TIMESHEET layout).
+// Returns false when the file is not in that layout, so the simple importer runs instead.
+async function importTimesheet(file) {
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const order = [...wb.SheetNames].sort((a, b) => (b === 'TIMESHEET') - (a === 'TIMESHEET'));
+  let parsed = null;
+  for (const name of order) {
+    const p = parseTimesheet(wb.Sheets[name]);
+    if (p && p.length) { parsed = p; break; }
+  }
+  if (!parsed) return false;
+
+  const byName = new Map(state.teachers.map(x => [x.name_en.toLowerCase(), x]));
+  const ops = [];
+  const inserts = [];
+  let updated = 0;
+  parsed.forEach(r => {
+    const ex = byName.get(r.name_en.toLowerCase());
+    if (ex) {
+      // The schedule file is the source of truth for subject and classes.
+      ops.push(sb.from('teachers').update({ subject: r.subject, classes: r.classes }).eq('id', ex.id));
+      updated++;
+    } else {
+      inserts.push({ name_en: r.name_en, subject: r.subject, classes: r.classes });
+    }
+  });
+
+  const inFile = new Set(parsed.map(r => r.name_en.toLowerCase()));
+  const notInFile = state.teachers.filter(x => !inFile.has(x.name_en.toLowerCase())).length;
+
+  const results = await Promise.all(ops);
+  const bad = results.find(x => x.error);
+  if (bad) { fail(bad.error); return true; }
+  if (inserts.length) {
+    const { error } = await sb.from('teachers').insert(inserts);
+    if (error) { fail(error); return true; }
+  }
+  await loadAll();
+  toast(`${t('importDone')}: ${updated} updated, ${inserts.length} added, ${notInFile} not in file`);
+  return true;
+}
+
 $('importFile').addEventListener('change', async e => {
   if (guardWrite()) { e.target.value = ''; return; }
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
   try {
+    if (await importTimesheet(file)) return;
     const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
     if (!rows.length) return toast(t('noRows'));
