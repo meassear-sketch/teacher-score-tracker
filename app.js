@@ -27,7 +27,7 @@ const STR = {
     saved: 'បានរក្សាទុករួច', errSave: 'រក្សាទុកមិនបាន', errLoad: 'ទាញទិន្នន័យមិនបាន',
     cloudOk: '☁️ បានភ្ជាប់ Cloud', cloudErr: '⚠️ ភ្ជាប់ Cloud មិនបាន', cloudLoading: 'កំពុងភ្ជាប់...',
     confirmDel: 'លុបគ្រូនេះមែនទេ?', confirmReset: 'កំណត់ថ្ងៃបានប្រគល់ទាំងអស់ឲ្យទៅទទេមែនទេ?', confirmClear: 'លុបគ្រូទាំងអស់មែនទេ? មិនអាចត្រឡប់វិញបានទេ!',
-    importDone: 'បញ្ចូលរួច', noRows: 'File គ្មានទិន្នន័យ',
+    importDone: 'បញ្ចូលរួច', noRows: 'File គ្មានទិន្នន័យ', viewerNo: 'អ្នកមើលមិនអាចកែប្រែបានទេ',
     chartTitle: 'សមាមាត្រតាមមុខវិជ្ជា', lgOn: 'រួច', lgLate: 'យឺត', lgNot: 'មិនទាន់'
   },
   en: {
@@ -54,7 +54,7 @@ const STR = {
     saved: 'Saved', errSave: 'Could not save', errLoad: 'Could not load data',
     cloudOk: '☁️ Cloud connected', cloudErr: '⚠️ Cloud connection failed', cloudLoading: 'Connecting...',
     confirmDel: 'Delete this teacher?', confirmReset: 'Clear all submission dates?', confirmClear: 'Delete ALL teachers? This cannot be undone!',
-    importDone: 'Imported', noRows: 'File has no rows',
+    importDone: 'Imported', noRows: 'File has no rows', viewerNo: 'View-only access',
     chartTitle: 'Status by subject', lgOn: 'On time', lgLate: 'Late', lgNot: 'Not submitted'
   }
 };
@@ -63,7 +63,7 @@ const state = {
   lang: localStorage.getItem('lang') || 'km',
   theme: localStorage.getItem('theme') || 'light',
   filter: 'all', view: 'table', search: '', sort: 'name',
-  teachers: [], settings: {}, editId: null
+  teachers: [], settings: {}, editId: null, role: 'admin'
 };
 
 const t = k => (STR[state.lang][k] ?? k);
@@ -168,7 +168,7 @@ function renderTable(rows) {
     <td>${esc(r.subject)}</td>
     <td><span class="code">${esc(r.classes)}</span></td>
     <td>${fmt(calcDue(r))}</td>
-    <td><input type="date" value="${r.submitted_date || ''}" data-sub="${r.id}" /></td>
+    <td><input type="date" value="${r.submitted_date || ''}" data-sub="${r.id}" ${state.role === 'viewer' ? 'disabled' : ''} /></td>
     <td><span class="pill ${r.ev.key}">${t(STATUS_KEY[r.ev.key])}</span></td>
     <td class="days ${r.ev.key}">${dayLabel(r.ev)}</td>
     <td class="muted">${esc(r.remark)}</td>
@@ -254,6 +254,7 @@ async function loadAll() {
 }
 
 async function saveSetting(patch) {
+  if (guardWrite()) return;
   const { error } = await sb.from('app_settings').update(patch).eq('id', 1);
   if (error) return fail(error);
   Object.assign(state.settings, patch);
@@ -262,6 +263,7 @@ async function saveSetting(patch) {
 }
 
 async function updateTeacher(id, patch) {
+  if (guardWrite()) return;
   const { error } = await sb.from('teachers').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id);
   if (error) return fail(error);
   Object.assign(state.teachers.find(x => x.id === id), patch);
@@ -270,6 +272,7 @@ async function updateTeacher(id, patch) {
 }
 
 async function removeTeacher(id) {
+  if (guardWrite()) return;
   if (!confirm(t('confirmDel'))) return;
   const { error } = await sb.from('teachers').delete().eq('id', id);
   if (error) return fail(error);
@@ -279,6 +282,7 @@ async function removeTeacher(id) {
 const FIELDS = ['name_en', 'name_km', 'subject', 'classes', 'due_date', 'submitted_date', 'remark'];
 
 function openForm(id) {
+  if (guardWrite()) return;
   const f = $('teacherForm');
   f.reset();
   state.editId = id || null;
@@ -292,6 +296,7 @@ function openForm(id) {
 
 $('teacherForm').addEventListener('submit', async e => {
   e.preventDefault();
+  if (guardWrite()) return;
   const f = e.target;
   const data = {};
   FIELDS.forEach(k => { data[k] = f.elements[k].value.trim() || null; });
@@ -326,6 +331,7 @@ $('search').oninput = e => { state.search = e.target.value; render(); };
 $('sort').onchange = e => { state.sort = e.target.value; render(); };
 
 $('applyDue').onclick = async () => {
+  if (guardWrite()) return;
   const due = $('dueDate').value || null;
   const { error } = await sb.from('teachers').update({ due_date: null }).not('id', 'is', null);
   if (error) return fail(error);
@@ -335,6 +341,7 @@ $('applyDue').onclick = async () => {
 $('calcDate').onchange = () => saveSetting({ calc_date: $('calcDate').value || null });
 
 $('resetBtn').onclick = async () => {
+  if (guardWrite()) return;
   if (!confirm(t('confirmReset'))) return;
   const { error } = await sb.from('teachers').update({ submitted_date: null }).not('id', 'is', null);
   if (error) return fail(error);
@@ -342,6 +349,7 @@ $('resetBtn').onclick = async () => {
 };
 
 $('clearBtn').onclick = async () => {
+  if (guardWrite()) return;
   if (!confirm(t('confirmClear'))) return;
   const { error } = await sb.from('teachers').delete().not('id', 'is', null);
   if (error) return fail(error);
@@ -363,6 +371,7 @@ $('themeBtn').onclick = () => {
 };
 
 $('importFile').addEventListener('change', async e => {
+  if (guardWrite()) { e.target.value = ''; return; }
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
@@ -441,9 +450,29 @@ $('exportBtn').onclick = () => {
   XLSX.writeFile(wb, `score-submission-${todayStr()}.xlsx`);
 };
 
+// ---- Roles: admin (full) and viewer (read-only, UI level) ----
+function setRole(r) {
+  state.role = r;
+  document.body.classList.toggle('viewer', r === 'viewer');
+  $('dueDate').disabled = r === 'viewer';
+  $('calcDate').disabled = r === 'viewer';
+}
+
+// Returns true (and shows a message) when the current user may not change data.
+function guardWrite() {
+  if (state.role === 'viewer') {
+    toast(t('viewerNo'));
+    return true;
+  }
+  return false;
+}
+
 // ---- Shared-password gate ----
 // Stores only the SHA-256 hash of the password, never the plain text.
-const PASS_HASH = '5313e5bf17148de844ff74be3663d47c6e361ca469b30a36337701233c89a15e';
+const HASHES = {
+  admin: '5313e5bf17148de844ff74be3663d47c6e361ca469b30a36337701233c89a15e',  // full access
+  viewer: 'd17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2'  // view only
+};
 const AUTH_KEY = 'tst_auth';
 
 async function sha256(text) {
@@ -456,7 +485,9 @@ function startApp() {
   loadAll();
 }
 
-if (sessionStorage.getItem(AUTH_KEY) === '1') {
+const savedRole = sessionStorage.getItem(AUTH_KEY);
+if (savedRole === 'admin' || savedRole === 'viewer') {
+  setRole(savedRole);
   startApp();
 } else {
   $('gate').style.display = 'flex';
@@ -466,8 +497,10 @@ if (sessionStorage.getItem(AUTH_KEY) === '1') {
 $('gateForm').addEventListener('submit', async e => {
   e.preventDefault();
   const hash = await sha256($('gatePass').value);
-  if (hash === PASS_HASH) {
-    sessionStorage.setItem(AUTH_KEY, '1');
+  const role = hash === HASHES.admin ? 'admin' : hash === HASHES.viewer ? 'viewer' : null;
+  if (role) {
+    sessionStorage.setItem(AUTH_KEY, role);
+    setRole(role);
     $('gate').style.display = 'none';
     startApp();
   } else {

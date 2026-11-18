@@ -67,6 +67,8 @@ dialog input,dialog textarea{width:100%}
 .toast.show{opacity:1}
 .cloud{font-size:13px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.2)}
 .empty{text-align:center;padding:40px;color:var(--muted)}
+/* View-only mode: hide every control that changes data */
+body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #applyDue,body.viewer #importLabel,body.viewer [data-edit],body.viewer [data-del]{display:none !important}
 @media (max-width:640px){dialog .grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -95,7 +97,7 @@ dialog input,dialog textarea{width:100%}
       <div class="field"><label data-i18n="calcLabel"></label><input type="date" id="calcDate" /></div>
     </div>
     <div class="actions">
-      <label class="btn primary" style="cursor:pointer"><input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden /><span data-i18n="importBtn"></span></label>
+      <label class="btn primary" id="importLabel" style="cursor:pointer"><input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden /><span data-i18n="importBtn"></span></label>
       <button class="btn primary" id="addBtn" data-i18n="addBtn"></button>
       <button class="btn danger" id="resetBtn" data-i18n="resetBtn"></button>
       <button class="btn danger" id="clearBtn" data-i18n="clearBtn"></button>
