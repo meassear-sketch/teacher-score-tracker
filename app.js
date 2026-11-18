@@ -470,8 +470,7 @@ function guardWrite() {
 // ---- Shared-password gate ----
 // Stores only the SHA-256 hash of the password, never the plain text.
 const HASHES = {
-  admin: '5313e5bf17148de844ff74be3663d47c6e361ca469b30a36337701233c89a15e',  // full access
-  viewer: 'd17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2'  // view only
+  admin: '5313e5bf17148de844ff74be3663d47c6e361ca469b30a36337701233c89a15e'  // full access
 };
 const AUTH_KEY = 'tst_auth';
 
@@ -497,10 +496,9 @@ if (savedRole === 'admin' || savedRole === 'viewer') {
 $('gateForm').addEventListener('submit', async e => {
   e.preventDefault();
   const hash = await sha256($('gatePass').value);
-  const role = hash === HASHES.admin ? 'admin' : hash === HASHES.viewer ? 'viewer' : null;
-  if (role) {
-    sessionStorage.setItem(AUTH_KEY, role);
-    setRole(role);
+  if (hash === HASHES.admin) {
+    sessionStorage.setItem(AUTH_KEY, 'admin');
+    setRole('admin');
     $('gate').style.display = 'none';
     startApp();
   } else {
@@ -508,4 +506,12 @@ $('gateForm').addEventListener('submit', async e => {
     $('gatePass').value = '';
     $('gatePass').focus();
   }
+});
+
+// "View only" needs no password: entering it gives read-only access.
+$('viewOnlyBtn').addEventListener('click', () => {
+  sessionStorage.setItem(AUTH_KEY, 'viewer');
+  setRole('viewer');
+  $('gate').style.display = 'none';
+  startApp();
 });
