@@ -441,5 +441,38 @@ $('exportBtn').onclick = () => {
   XLSX.writeFile(wb, `score-submission-${todayStr()}.xlsx`);
 };
 
-applyStatic();
-loadAll();
+// ---- Shared-password gate ----
+// Stores only the SHA-256 hash of the password, never the plain text.
+const PASS_HASH = '5313e5bf17148de844ff74be3663d47c6e361ca469b30a36337701233c89a15e';
+const AUTH_KEY = 'tst_auth';
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function startApp() {
+  applyStatic();
+  loadAll();
+}
+
+if (sessionStorage.getItem(AUTH_KEY) === '1') {
+  startApp();
+} else {
+  $('gate').style.display = 'flex';
+  $('gatePass').focus();
+}
+
+$('gateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const hash = await sha256($('gatePass').value);
+  if (hash === PASS_HASH) {
+    sessionStorage.setItem(AUTH_KEY, '1');
+    $('gate').style.display = 'none';
+    startApp();
+  } else {
+    $('gateErr').textContent = 'Password មិនត្រឹមត្រូវ / Wrong password';
+    $('gatePass').value = '';
+    $('gatePass').focus();
+  }
+});

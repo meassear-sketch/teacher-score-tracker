@@ -158,6 +158,16 @@ dialog input,dialog textarea{width:100%}
 </dialog>
 <div class="toast" id="toast"></div>
 
+<div id="gate" style="position:fixed;inset:0;background:rgba(10,12,30,.92);display:none;align-items:center;justify-content:center;z-index:100;padding:20px">
+  <form id="gateForm" class="card" style="width:min(380px,92vw);text-align:center">
+    <h3 style="margin:0 0 6px">🔒 ការចូលប្រើ / Sign in</h3>
+    <p class="muted" style="margin:0 0 14px">សូមបញ្ចូល Password / Enter the password</p>
+    <input type="password" id="gatePass" autocomplete="current-password" required style="width:100%;text-align:center;font-size:18px;letter-spacing:4px" />
+    <p id="gateErr" style="color:var(--red);min-height:22px;margin:8px 0"></p>
+    <button class="btn primary" type="submit" style="width:100%;justify-content:center">ចូល / Enter</button>
+  </form>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="config.js"></script>
