@@ -76,9 +76,12 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
 <div class="wrap">
 
 <header>
-  <div>
-    <h1 data-i18n="title"></h1>
-    <p data-i18n="subtitle"></p>
+  <div style="display:flex;align-items:center;gap:14px">
+    <img src="logo.png" alt="Western International School" style="height:64px;width:auto;border-radius:12px;flex:0 0 auto" />
+    <div>
+      <h1 data-i18n="title"></h1>
+      <p data-i18n="subtitle"></p>
+    </div>
   </div>
   <div class="actions">
     <span class="cloud" id="cloud"></span>
@@ -95,7 +98,7 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
     <div class="actions">
       <div class="field"><label data-i18n="dueLabel"></label><input type="date" id="dueDate" /></div>
       <button class="btn primary" id="applyDue" data-i18n="applyAll"></button>
-      <div class="field"><label data-i18n="calcLabel"></label><input type="date" id="calcDate" /></div>
+      <div class="field"><label data-i18n="calcLabel"></label><input type="date" id="calcDate" disabled title="ថ្ងៃនេះតាមម៉ាស៊ីន / Today from this computer" /></div>
     </div>
     <div class="actions">
       <label class="btn primary" id="importLabel" style="cursor:pointer"><input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden /><span data-i18n="importBtn"></span></label>

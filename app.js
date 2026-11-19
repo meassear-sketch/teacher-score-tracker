@@ -71,7 +71,12 @@ const state = {
 const t = k => (STR[state.lang][k] ?? k);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dayNum = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; };
-const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Phnom_Penh' });
+// Today's date from the device's own clock (YYYY-MM-DD).
+const todayStr = () => {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 const fmt = s => { if (!s) return ''; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; };
 const calcDue = tc => tc.due_date || state.settings.due_date || null;
 const STATUS_KEY = { ontime: 'stOn', late: 'stLate', notsub: 'stNot' };
@@ -88,7 +93,7 @@ function evaluate(tc) {
     return diff > 0 ? { key: 'late', n: diff } : { key: 'ontime', n: -diff };
   }
   if (due === null) return { key: 'notsub', n: 0 };
-  const calc = dayNum(state.settings.calc_date || todayStr());
+  const calc = dayNum(todayStr());
   return { key: 'notsub', n: calc - due };
 }
 
@@ -250,7 +255,7 @@ async function loadAll() {
   state.settings = s.data || {};
   state.teachers = tc.data || [];
   $('dueDate').value = state.settings.due_date || '';
-  $('calcDate').value = state.settings.calc_date || todayStr();
+  $('calcDate').value = todayStr();
   setCloud('ok');
   render();
 }
@@ -340,7 +345,17 @@ $('applyDue').onclick = async () => {
   await saveSetting({ due_date: due });
 };
 
-$('calcDate').onchange = () => saveSetting({ calc_date: $('calcDate').value || null });
+// The calculation date is always the device's date, so it is not saved or editable.
+// Refresh it if the page stays open past midnight.
+let lastDay = todayStr();
+setInterval(() => {
+  const now = todayStr();
+  if (now !== lastDay) {
+    lastDay = now;
+    $('calcDate').value = now;
+    render();
+  }
+}, 60000);
 
 $('resetBtn').onclick = async () => {
   if (guardWrite()) return;
@@ -500,7 +515,6 @@ function setRole(r) {
   state.role = r;
   document.body.classList.toggle('viewer', r === 'viewer');
   $('dueDate').disabled = r === 'viewer';
-  $('calcDate').disabled = r === 'viewer';
 }
 
 // Returns true (and shows a message) when the current user may not change data.
