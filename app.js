@@ -960,10 +960,11 @@ $('signOutBtn').addEventListener('click', () => {
   location.reload();
 });
 
-// "View only" needs no password: entering it gives read-only access.
-$('viewOnlyBtn').addEventListener('click', () => {
+// "View only" needs no password: entering it gives read-only access to one page.
+document.querySelectorAll('[data-view-only]').forEach(b => b.addEventListener('click', () => {
   sessionStorage.setItem(AUTH_KEY, 'viewer');
   setRole('viewer');
+  state.view = b.dataset.viewOnly;
   $('gate').style.display = 'none';
   startApp();
-});
+}));
