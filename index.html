@@ -78,16 +78,17 @@ body.viewer #hrImportLabel{display:none !important}
 .grade-pill{display:inline-block;min-width:44px;text-align:center;border-radius:999px;padding:4px 10px;font-weight:700;color:#fff;background:linear-gradient(120deg,#f59e0b,#f97316)}
 td.campus-row{background:linear-gradient(90deg,#ccfbf1,#f0fdfa);color:#0f766e;font-weight:700;font-size:15px}
 [data-theme=dark] td.campus-row{background:linear-gradient(90deg,#134e4a,#1b1e3c);color:#5eead4}
-#hrDlg{width:min(800px,96vw)}
+#hrDlg{width:min(560px,96vw)}
 .tt-wrap{overflow-x:auto;margin-top:12px}
-table.tt{width:100%;min-width:600px;border-collapse:collapse;font-size:13px}
-table.tt th,table.tt td{border:1px solid var(--border);padding:5px;vertical-align:top;text-align:center}
-table.tt thead th{font-size:12px;font-weight:700;color:#b45309}
-table.tt .tt-time{white-space:nowrap;font-size:12px;font-weight:600;color:var(--muted,#64748b);width:1%}
-.tt-pill{background:linear-gradient(120deg,#fde68a,#fcd34d);color:#451a03;border-radius:8px;padding:4px 6px;margin:2px 0;line-height:1.25}
-.tt-pill b{display:block;font-size:12px}
-.tt-pill span{font-size:11px;opacity:.85}
-[data-theme=dark] table.tt thead th{color:#fcd34d}
+table.tt{width:100%;border-collapse:collapse;font-size:14px}
+table.tt th,table.tt td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+table.tt thead th{font-size:13px;font-weight:700;color:#334155;background:#f1f5f9}
+[data-theme=dark] table.tt thead th{background:#1e293b;color:#cbd5e1}
+table.tt tbody tr:last-child td{border-bottom:0}
+.tt-day{display:inline-flex;align-items:center;gap:8px;background:#eff6ff;color:#1e3a8a;border-radius:10px;padding:8px 12px;font-weight:700;white-space:nowrap}
+[data-theme=dark] .tt-day{background:#1e293b;color:#bfdbfe}
+.tt-select{width:100%;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:inherit;font:inherit;font-size:14px}
+[data-theme=dark] .tt-select{background:#0f172a;border-color:#334155;color:#e2e8f0}
 .hr-line{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
 .hr-line:last-child{border-bottom:0}
 .hr-label{color:var(--muted);font-size:14px}

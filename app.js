@@ -632,25 +632,28 @@ function renderHomeroom() {
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
 }
 
-// Labels for the timetable grid (days Mon–Fri, periods 1–8 by bell time).
-const TT_UI_DAYS = ['ថ្ងៃចន្ទ (Mon)', 'ថ្ងៃអង្គារ (Tue)', 'ថ្ងៃពុធ (Wed)', 'ថ្ងៃព្រហស្បតិ៍ (Thu)', 'ថ្ងៃសុក្រ (Fri)'];
+// Labels for the timetable pop-up (days Mon–Fri; periods 1–8 by bell time).
+const TT_UI_DAYS = ['ថ្ងៃចន្ទ', 'ថ្ងៃអង្គារ', 'ថ្ងៃពុធ', 'ថ្ងៃព្រហស្បតិ៍', 'ថ្ងៃសុក្រ'];
 const TT_UI_PERIODS = ['8:00-8:50 AM', '9:00-9:50 AM', '10:00-10:50 AM', '11:00-11:50 AM',
   '1:00-1:50 PM', '2:00-2:50 PM', '3:00-3:50 PM', '4:00-4:50 PM'];
 
-// Weekly grid for one teacher. rows = timetable slots of one academic year + semester.
+// One row per weekday. The dropdown lists the teacher's periods that day (read-only).
+// rows = timetable slots of one academic year + semester.
 function ttGridHtml(rows) {
-  const cell = {};
-  rows.forEach(x => { const k = `${x.period}|${x.day}`; (cell[k] = cell[k] || []).push(x); });
-  const head = `<tr><th></th>${TT_UI_DAYS.map(d => `<th>${d}</th>`).join('')}</tr>`;
-  const body = TT_UI_PERIODS.map((label, i) => {
-    const tds = TT_DAYS.map(day => {
-      const list = cell[`${i + 1}|${day}`] || [];
-      if (!list.length) return `<td class="muted">-</td>`;
-      return `<td>${list.map(x => `<div class="tt-pill"><b>${esc(x.subject)}</b><span>${esc(x.grade)}</span></div>`).join('')}</td>`;
-    }).join('');
-    return `<tr><th class="tt-time">${label}</th>${tds}</tr>`;
+  const byDay = {};
+  rows.forEach(x => { (byDay[x.day] = byDay[x.day] || []).push(x); });
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm13 8H4v10h16V10z"/></svg>`;
+  const body = TT_DAYS.map((day, i) => {
+    const list = (byDay[day] || []).slice().sort((a, b) => a.period - b.period);
+    const opts = list.map(x => `<option>${TT_UI_PERIODS[x.period - 1]} · ${esc(x.subject)} ${esc(x.grade)}</option>`).join('');
+    const select = list.length
+      ? `<select class="tt-select"><option value="">-- ជ្រើសរើសម៉ោង --</option>${opts}</select>`
+      : `<select class="tt-select" disabled><option>-- គ្មានម៉ោង --</option></select>`;
+    return `<tr><td><span class="tt-day">${icon}${TT_UI_DAYS[i]}</span></td><td>${select}</td></tr>`;
   }).join('');
-  return `<div class="tt-wrap"><table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+  return `<div class="tt-wrap"><table class="tt"><thead><tr>
+      <th>ថ្ងៃ (Day)</th><th>ម៉ោងការងារបន្ទុកថ្នាក់ (Drop List)</th>
+    </tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend">${t('ttTotal')}: ${rows.length}</div>`;
 }
 
