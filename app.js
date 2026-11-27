@@ -679,8 +679,10 @@ function renderHomeroom() {
   const admin = state.role === 'admin';
   const dayHead = ['ថ្ងៃចន្ទ (Mon)', 'ថ្ងៃអង្គារ (Tue)', 'ថ្ងៃពុធ (Wed)', 'ថ្ងៃព្រហស្បតិ៍ (Thu)', 'ថ្ងៃសុក្រ (Fri)'];
   let body = '';
-  rows.forEach(r => {
+  rows.forEach((r, i) => {
     body += `<tr>
+      <td class="idx">${i + 1}</td>
+      <td><span class="class-pill">${esc(r.grade)}</span></td>
       <td><button class="hr-name hr-stack" data-hr="${esc(r.id)}"><span class="hr-km">${esc(r.name_km)}</span><span class="hr-en">${esc(r.name_en)}</span></button></td>
       <td>${esc(r.subject)}</td>
       ${admin ? `<td>${esc(r.phone)}</td>` : ''}
@@ -688,7 +690,7 @@ function renderHomeroom() {
     </tr>`;
   });
   return `<div class="table-wrap"><table class="hr-duty"><thead><tr>
-      <th>ឈ្មោះគ្រូបន្ទុកថ្នាក់</th><th>មុខវិជ្ជា</th>${admin ? '<th>លេខទូរស័ព្ទ (Phone)</th>' : ''}
+      <th>ល.រ</th><th>ថ្នាក់</th><th>ឈ្មោះគ្រូបន្ទុកថ្នាក់</th><th>មុខវិជ្ជា</th>${admin ? '<th>លេខទូរស័ព្ទ (Phone)</th>' : ''}
       ${dayHead.map(d => `<th>${d}</th>`).join('')}
       <th>ម៉ោងសរុប</th>${admin ? '<th>សកម្មភាព</th>' : ''}
     </tr></thead><tbody>${body}</tbody></table></div>
