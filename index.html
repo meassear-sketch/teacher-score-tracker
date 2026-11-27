@@ -70,6 +70,21 @@ dialog input,dialog textarea{width:100%}
 /* View-only mode: hide every control that changes data */
 body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #applyDue,body.viewer #importLabel,body.viewer [data-edit],body.viewer [data-del]{display:none !important}
 body.viewer #hrImportLabel{display:none !important}
+/* Homeroom section: eye-catching accents */
+.chip.hr{background:linear-gradient(120deg,#0d9488,#14b8a6);color:#fff;border-color:transparent}
+.chip.hr.on{background:linear-gradient(120deg,#f59e0b,#f97316);color:#fff}
+.hr-name{background:none;border:0;padding:0;font:inherit;font-weight:700;color:#4130c8;cursor:pointer;text-align:left}
+.hr-name:hover{text-decoration:underline}
+.grade-pill{display:inline-block;min-width:44px;text-align:center;border-radius:999px;padding:4px 10px;font-weight:700;color:#fff;background:linear-gradient(120deg,#f59e0b,#f97316)}
+td.campus-row{background:linear-gradient(90deg,#ccfbf1,#f0fdfa);color:#0f766e;font-weight:700;font-size:15px}
+[data-theme=dark] td.campus-row{background:linear-gradient(90deg,#134e4a,#1b1e3c);color:#5eead4}
+#hrDlg{width:min(440px,94vw)}
+.hr-line{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
+.hr-line:last-child{border-bottom:0}
+.hr-label{color:var(--muted);font-size:14px}
+.hr-val{font-weight:600;text-align:right}
+.hr-val.big{font-size:17px;color:#4130c8}
+[data-theme=dark] .hr-val.big{color:#c3bfff}
 @media (max-width:640px){dialog .grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -129,7 +144,7 @@ body.viewer #hrImportLabel{display:none !important}
       <button class="chip" data-view="table" data-i18n="vTable"></button>
       <button class="chip" data-view="board" data-i18n="vBoard"></button>
       <button class="chip" data-view="charts" data-i18n="vCharts"></button>
-      <button class="chip" data-view="homeroom" data-i18n="vHome"></button>
+      <button class="chip hr" data-view="homeroom" data-i18n="vHome"></button>
     </div>
   </div>
   <div class="toolbar" style="margin-top:0">
@@ -150,6 +165,14 @@ body.viewer #hrImportLabel{display:none !important}
     </div>
   </div>
   <div id="content"></div>
+
+<dialog id="hrDlg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <h3 id="hrDlgTitle" style="margin:0"></h3>
+    <button class="btn ghost sm" type="button" id="hrDlgClose">✕</button>
+  </div>
+  <div id="hrDlgBody"></div>
+</dialog>
 </section>
 
 </div>

@@ -32,6 +32,7 @@ const STR = {
     vHome: 'គ្រូបន្ទុកថ្នាក់', hrImport: 'នាំចូលគ្រូបន្ទុកថ្នាក់ (Excel)', hrSearch: 'ស្វែងរកថ្នាក់ ឬឈ្មោះគ្រូ...',
     hrNone: 'មិនមានទិន្នន័យគ្រូបន្ទុកថ្នាក់', hrError: 'ទាញទិន្នន័យគ្រូបន្ទុកថ្នាក់មិនបាន (ពិនិត្យ database)',
     hrClass: 'ថ្នាក់', hrTeacherEn: 'គ្រូបន្ទុក (EN)', hrTeacherKm: 'គ្រូបន្ទុក (ខ្មែរ)', hrCount: 'ចំនួនថ្នាក់',
+    phone: 'លេខទូរស័ព្ទ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
     hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
     hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
@@ -66,6 +67,7 @@ const STR = {
     vHome: 'Homeroom teachers', hrImport: 'Import homeroom (Excel)', hrSearch: 'Search class or teacher...',
     hrNone: 'No homeroom data yet', hrError: 'Could not load homeroom data (check database)',
     hrClass: 'Class', hrTeacherEn: 'Homeroom teacher (EN)', hrTeacherKm: 'Homeroom teacher (Khmer)', hrCount: 'Classes',
+    phone: 'Phone',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
     hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
     hrImported: 'Homeroom teachers imported',
@@ -349,6 +351,8 @@ $('content').addEventListener('change', e => {
 });
 
 $('content').addEventListener('click', e => {
+  const hr = e.target.closest('[data-hr]');
+  if (hr) return openHrDialog(hr.dataset.hr);
   const ed = e.target.closest('[data-edit]');
   if (ed) return openForm(ed.dataset.edit);
   const dl = e.target.closest('[data-del]');
@@ -360,6 +364,7 @@ document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { state.
 $('search').oninput = e => { state.search = e.target.value; render(); };
 $('sort').onchange = e => { state.sort = e.target.value; render(); };
 $('hrSem').onchange = e => { state.hr.sel = e.target.value; render(); };
+$('hrDlgClose').onclick = () => $('hrDlg').close();
 $('hrFile').addEventListener('change', async e => {
   const f = e.target.files[0];
   e.target.value = '';
@@ -589,22 +594,37 @@ function renderHomeroom() {
   rows.forEach((r, i) => {
     if (r.campus !== lastCampus) {
       lastCampus = r.campus;
-      body += `<tr><td colspan="6" style="background:var(--bg);font-weight:700">${esc(r.campus || '')}</td></tr>`;
+      body += `<tr><td colspan="5" class="campus-row">${esc(r.campus || '')}</td></tr>`;
     }
     body += `<tr>
       <td class="idx">${i + 1}</td>
-      <td><span class="code">${esc(r.grade)}</span></td>
-      <td><strong>${esc(r.name_en)}</strong></td>
+      <td><span class="grade-pill">${esc(r.grade)}</span></td>
+      <td><button class="hr-name" data-hr="${esc(r.id)}">${esc(r.name_en)}</button></td>
       <td>${esc(r.name_km)}</td>
-      <td>${esc(r.subject)}</td>
       <td class="muted">${esc(r.remark)}</td>
     </tr>`;
   });
   return `<div class="table-wrap"><table><thead><tr>
       <th>${t('no')}</th><th>${t('hrClass')}</th><th>${t('hrTeacherEn')}</th><th>${t('hrTeacherKm')}</th>
-      <th>${t('subject')}</th><th>${t('remark')}</th>
+      <th>${t('remark')}</th>
     </tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
+}
+
+// Pop-up with the subject and phone of a homeroom teacher. Phone is admin only.
+function openHrDialog(id) {
+  const r = state.hr.rows.find(x => String(x.id) === String(id));
+  if (!r) return;
+  $('hrDlgTitle').textContent = `${t('hrClass')} ${r.grade}`;
+  const line = (label, val, big) => `
+    <div class="hr-line">
+      <span class="hr-label">${esc(label)}</span>
+      <span class="hr-val ${big ? 'big' : ''}">${esc(val) || '—'}</span>
+    </div>`;
+  let html = line(t('hrTeacherEn'), r.name_en, true) + line(t('hrTeacherKm'), r.name_km) + line(t('subject'), r.subject);
+  if (state.role === 'admin') html += line(t('phone'), r.phone);
+  $('hrDlgBody').innerHTML = html;
+  $('hrDlg').showModal();
 }
 
 // Replaces one academic year + semester with the classes in the chosen Excel file.
@@ -625,7 +645,7 @@ async function importHomeroom(file) {
 
   const payload = res.rows.map(r => ({
     academic_year: res.academic_year, semester: sem, campus: r.campus, grade: r.grade,
-    name_en: r.name_en, name_km: r.name_km, subject: r.subject, remark: r.remark
+    name_en: r.name_en, name_km: r.name_km, subject: r.subject, remark: r.remark, phone: r.phone
   }));
   const ins = await sb.from('homeroom_assignments').insert(payload);
   if (ins.error) return fail(ins.error);

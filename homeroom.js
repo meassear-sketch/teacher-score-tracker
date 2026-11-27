@@ -32,6 +32,7 @@ function parseHomeroomSheet(ws) {
   const colSubject = header.indexOf('subject');
   const colGrade = header.indexOf('grade');
   const colRemark = header.indexOf('remarks');
+  const colPhone = header.indexOf('telephone');
 
   const out = [];
   let campus = null;
@@ -57,7 +58,8 @@ function parseHomeroomSheet(ws) {
       name_en: nameEn,
       name_km: colKm >= 0 ? hrText(r[colKm]) || null : null,
       subject: colSubject >= 0 ? hrText(r[colSubject]) || null : null,
-      remark: colRemark >= 0 ? hrText(r[colRemark]) || null : null
+      remark: colRemark >= 0 ? hrText(r[colRemark]) || null : null,
+      phone: colPhone >= 0 ? hrText(r[colPhone]) || null : null
     });
   }
 
