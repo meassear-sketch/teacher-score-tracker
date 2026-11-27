@@ -741,7 +741,7 @@ function ttDutyHtml(rows, duty, editable) {
   return `<div class="tt-wrap"><table class="tt"><thead><tr>
       <th>ថ្ងៃ (Day)</th><th>ម៉ោងការងារបន្ទុកថ្នាក់ (Drop List)</th>
     </tr></thead><tbody>${body}</tbody></table></div>
-    ${editable ? `<div class="tt-actions"><button class="btn" type="button" id="ttSave">${t('ttSave')}</button></div>` : ''}
+    ${editable ? `<div class="tt-actions"><button class="btn primary" type="button" id="ttSave">${t('ttSave')}</button></div>` : ''}
     ${rows.length ? `<div class="legend">${t('ttTotal')}: ${rows.length}</div>` : ''}`;
 }
 
