@@ -33,6 +33,7 @@ const STR = {
     hrNone: 'មិនមានទិន្នន័យគ្រូបន្ទុកថ្នាក់', hrError: 'ទាញទិន្នន័យគ្រូបន្ទុកថ្នាក់មិនបាន (ពិនិត្យ database)',
     hrClass: 'ថ្នាក់', hrTeacherEn: 'គ្រូបន្ទុក (EN)', hrTeacherKm: 'គ្រូបន្ទុក (ខ្មែរ)', hrCount: 'ចំនួនថ្នាក់',
     phone: 'លេខទូរស័ព្ទ',
+    ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
     hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
     hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
@@ -68,6 +69,7 @@ const STR = {
     hrNone: 'No homeroom data yet', hrError: 'Could not load homeroom data (check database)',
     hrClass: 'Class', hrTeacherEn: 'Homeroom teacher (EN)', hrTeacherKm: 'Homeroom teacher (Khmer)', hrCount: 'Classes',
     phone: 'Phone',
+    ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
     hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
     hrImported: 'Homeroom teachers imported',
@@ -458,9 +460,28 @@ async function importTimesheet(file) {
     const { error } = await sb.from('teachers').insert(inserts);
     if (error) { fail(error); return true; }
   }
+  const tt = await importTimetable(wb);
+  if (tt && tt.error) { fail(tt.error); return true; }
   await loadAll();
-  toast(`${t('importDone')}: ${updated} updated, ${inserts.length} added, ${notInFile} not in file`);
+  const ttMsg = typeof tt === 'number' && tt > 0 ? `, ${t('ttImported')}: ${tt}` : '';
+  toast(`${t('importDone')}: ${updated} updated, ${inserts.length} added, ${notInFile} not in file${ttMsg}`);
   return true;
+}
+
+// Saves the weekly timetable found in the class sheets (G6 … G12) of the schedule file.
+// Replaces the same academic year + semester. Returns the number of slots, or { error }.
+async function importTimetable(wb) {
+  const tt = parseTimetableWorkbook(wb);
+  if (!tt.slots.length || !tt.academic_year || !tt.semester) return 0;
+  const del = await sb.from('teacher_timetable').delete()
+    .eq('academic_year', tt.academic_year).eq('semester', tt.semester);
+  if (del.error) return { error: del.error };
+  const payload = tt.slots.map(s => ({ ...s, academic_year: tt.academic_year, semester: tt.semester }));
+  for (let i = 0; i < payload.length; i += 400) {
+    const { error } = await sb.from('teacher_timetable').insert(payload.slice(i, i + 400));
+    if (error) return { error };
+  }
+  return payload.length;
 }
 
 $('importFile').addEventListener('change', async e => {
@@ -611,10 +632,35 @@ function renderHomeroom() {
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
 }
 
-// Pop-up with the subject and phone of a homeroom teacher. Phone is admin only.
-function openHrDialog(id) {
+// Labels for the timetable grid (days Mon–Fri, periods 1–8 by bell time).
+const TT_UI_DAYS = ['ថ្ងៃចន្ទ (Mon)', 'ថ្ងៃអង្គារ (Tue)', 'ថ្ងៃពុធ (Wed)', 'ថ្ងៃព្រហស្បតិ៍ (Thu)', 'ថ្ងៃសុក្រ (Fri)'];
+const TT_UI_PERIODS = ['8:00-8:50 AM', '9:00-9:50 AM', '10:00-10:50 AM', '11:00-11:50 AM',
+  '1:00-1:50 PM', '2:00-2:50 PM', '3:00-3:50 PM', '4:00-4:50 PM'];
+
+// Weekly grid for one teacher. rows = timetable slots of one academic year + semester.
+function ttGridHtml(rows) {
+  const cell = {};
+  rows.forEach(x => { const k = `${x.period}|${x.day}`; (cell[k] = cell[k] || []).push(x); });
+  const head = `<tr><th></th>${TT_UI_DAYS.map(d => `<th>${d}</th>`).join('')}</tr>`;
+  const body = TT_UI_PERIODS.map((label, i) => {
+    const tds = TT_DAYS.map(day => {
+      const list = cell[`${i + 1}|${day}`] || [];
+      if (!list.length) return `<td class="muted">-</td>`;
+      return `<td>${list.map(x => `<div class="tt-pill"><b>${esc(x.subject)}</b><span>${esc(x.grade)}</span></div>`).join('')}</td>`;
+    }).join('');
+    return `<tr><th class="tt-time">${label}</th>${tds}</tr>`;
+  }).join('');
+  return `<div class="tt-wrap"><table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <div class="legend">${t('ttTotal')}: ${rows.length}</div>`;
+}
+
+let hrDlgSeq = 0;
+
+// Pop-up for a homeroom teacher: subject, phone (admin only) and the weekly timetable.
+async function openHrDialog(id) {
   const r = state.hr.rows.find(x => String(x.id) === String(id));
   if (!r) return;
+  const seq = ++hrDlgSeq;
   $('hrDlgTitle').textContent = `${t('hrClass')} ${r.grade}`;
   const line = (label, val, big) => `
     <div class="hr-line">
@@ -623,8 +669,22 @@ function openHrDialog(id) {
     </div>`;
   let html = line(t('hrTeacherEn'), r.name_en, true) + line(t('hrTeacherKm'), r.name_km) + line(t('subject'), r.subject);
   if (state.role === 'admin') html += line(t('phone'), r.phone);
+  html += `<div id="ttBox"></div>`;
   $('hrDlgBody').innerHTML = html;
   $('hrDlg').showModal();
+
+  const { data, error } = await sb.from('teacher_timetable')
+    .select('academic_year, semester, day, period, grade, subject')
+    .eq('teacher_key', teacherKey(r.name_en));
+  if (seq !== hrDlgSeq) return; // another teacher was opened meanwhile
+  const box = $('ttBox');
+  if (error) { box.innerHTML = `<div class="empty">${t('hrError')}</div>`; return; }
+  if (!data || !data.length) { box.innerHTML = `<div class="empty">${t('ttNone')}</div>`; return; }
+  // Show the latest academic year and semester that has data for this teacher.
+  const latest = data.reduce((best, x) =>
+    (x.academic_year > best.academic_year || (x.academic_year === best.academic_year && x.semester > best.semester)) ? x : best, data[0]);
+  const rows = data.filter(x => x.academic_year === latest.academic_year && x.semester === latest.semester);
+  box.innerHTML = ttGridHtml(rows);
 }
 
 // Replaces one academic year + semester with the classes in the chosen Excel file.
