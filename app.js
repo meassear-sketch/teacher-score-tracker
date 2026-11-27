@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 const STR = {
   km: {
     title: 'ប្រព័ន្ធតាមដានការប្រគល់ពិន្ទុរបស់គ្រូ',
+    titleHr: 'ប្រព័ន្ធតាមដានគ្រូបន្ទុក',
     subtitle: 'គ្រប់គ្រងឈ្មោះគ្រូ កាលបរិច្ឆេទប្រគល់ពិន្ទុ និងគណនាថ្ងៃយឺតដោយស្វ័យប្រវត្តិ',
     refresh: 'ធ្វើបច្ចុប្បន្នភាព', export: 'ទាញយក Excel', langBtn: 'English',
     dueLabel: 'ថ្ងៃកំណត់ប្រគល់ពិន្ទុ (រួម)', calcLabel: 'ថ្ងៃគោលគណនា (ថ្ងៃនេះ)',
@@ -44,6 +45,7 @@ const STR = {
   },
   en: {
     title: 'Teacher Score Submission Tracker',
+    titleHr: 'Homeroom Teacher Tracker',
     subtitle: 'Manage teacher names, submission dates and late days automatically',
     refresh: 'Refresh', export: 'Export Excel', langBtn: 'ភាសាខ្មែរ',
     dueLabel: 'Submission deadline (all)', calcLabel: 'Calculation date (today)',
@@ -151,6 +153,10 @@ function applyStatic() {
   document.documentElement.lang = state.lang;
   document.documentElement.setAttribute('data-theme', state.theme);
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  // Homeroom view: shorter title and no subtitle line.
+  const hrView = state.view === 'homeroom';
+  document.querySelector('header h1').textContent = hrView ? t('titleHr') : t('title');
+  document.querySelector('header p').style.display = hrView ? 'none' : '';
   $('langBtn').textContent = t('langBtn');
   $('search').placeholder = t('search');
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('on', b.dataset.filter === state.filter));
