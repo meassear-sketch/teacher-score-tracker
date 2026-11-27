@@ -700,7 +700,7 @@ function renderHomeroom() {
       ${hrDutyCells(r)}
     </tr>`;
   });
-  return `${statsHtml}<div class="table-wrap"><table class="hr-duty"><thead><tr>
+  return `${statsHtml}<div class="table-wrap hr-scroll"><table class="hr-duty"><thead><tr>
       <th>ល.រ</th><th>ថ្នាក់</th><th>ឈ្មោះគ្រូបន្ទុកថ្នាក់</th><th>មុខវិជ្ជា</th>${admin ? '<th>លេខទូរស័ព្ទ (Phone)</th>' : ''}
       ${dayHead.map(d => `<th>${d}</th>`).join('')}
       <th>ម៉ោងសរុប</th>${admin ? '<th>សកម្មភាព</th>' : ''}
