@@ -195,7 +195,7 @@ function render() {
 
 function renderTable(rows) {
   if (!rows.length) return `<div class="empty">${t('empty')}</div>`;
-  return `<div class="table-wrap"><table><thead><tr>
+  return `<div class="table-wrap tbl-scroll"><table><thead><tr>
     <th>${t('no')}</th><th>${t('nameEn')}</th><th>${t('nameKm')}</th><th>${t('subject')}</th><th>${t('classes')}</th>
     <th>${t('dueCol')}</th><th>${t('submittedCol')}</th><th>${t('status')}</th><th>${t('days')}</th>
     <th>${t('remark')}</th><th>${t('actions')}</th>

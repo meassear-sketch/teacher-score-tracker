@@ -113,6 +113,9 @@ table.hr-duty thead th{white-space:nowrap}
 .hr-scroll{max-height:max(260px,calc(100vh - 300px));overflow:auto;border-radius:12px}
 table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-shadow:0 1px 0 var(--border)}
 [data-theme=dark] table.hr-duty thead th{background:#1e293b}
+/* Teacher tracker table: header row stays visible while the list scrolls */
+.tbl-scroll{max-height:max(260px,calc(100vh - 300px))}
+.tbl-scroll thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--border)}
 .hr-stats{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
 .hr-stat{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#334155;font-size:14px}
 .hr-stat b{font-size:16px}
