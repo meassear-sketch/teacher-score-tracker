@@ -593,12 +593,14 @@ async function loadHomeroom() {
 
 // Counts the saved duty days per homeroom teacher: key = "academic_year|semester|teacher_key".
 async function loadHrDuty() {
-  const { data, error } = await sb.from('homeroom_duty').select('academic_year, semester, teacher_key').limit(5000);
+  const { data, error } = await sb.from('homeroom_duty').select('academic_year, semester, teacher_key, day, period').limit(5000);
   if (error) { console.error(error); state.hr.duty = {}; return; }
   const map = {};
   (data || []).forEach(d => {
     const k = `${d.academic_year}|${d.semester}|${d.teacher_key}`;
-    map[k] = (map[k] || 0) + 1;
+    const e = map[k] || (map[k] = { n: 0, byDay: {} });
+    e.n++;
+    e.byDay[d.day] = d.period;
   });
   state.hr.duty = map;
 }
@@ -620,9 +622,18 @@ async function clearHrDuty(id) {
 // Two table cells per teacher: duty-hour count (pill) and actions (admin only).
 const HR_DUTY_TOTAL = 2; // duty hours each homeroom teacher must set per week
 
+// Weekday cells (chosen period in an amber pill), the total pill, and actions for admin.
 function hrDutyCells(r) {
-  const n = state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`] || 0;
+  const d = state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`] || { n: 0, byDay: {} };
+  const n = d.n;
   const done = n >= HR_DUTY_TOTAL;
+  const gear = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>`;
+  const days = TT_DAYS.map(day => {
+    const p = d.byDay[day];
+    if (!p) return '<td><span class="muted">-</span></td>';
+    const label = TT_UI_PERIODS[p - 1].replace(/ (AM|PM)$/, '');
+    return `<td><span class="duty-slot">${gear}${label}</span></td>`;
+  }).join('');
   const pill = `<td><span class="duty-pill${done ? ' ok' : ''}">${done ? '✓ ' : ''}${n}/${HR_DUTY_TOTAL} ${t('ttHours')}</span></td>`;
   let actions = '';
   if (state.role === 'admin') {
@@ -633,7 +644,7 @@ function hrDutyCells(r) {
         ${n ? `<button class="btn ghost sm duty-del" type="button" data-duty-clear="${esc(r.id)}" title="${t('ttClear')}">${trash}</button>` : ''}
       </div>`;
   }
-  return pill + `<td>${actions}</td>`;
+  return days + pill + (state.role === 'admin' ? `<td>${actions}</td>` : '');
 }
 
 // Fills the year/semester dropdown: years found in the data, plus the current year's two semesters.
@@ -664,24 +675,22 @@ function renderHomeroom() {
     .sort((a, b) => gradeKey(a.grade) - gradeKey(b.grade) || a.grade.localeCompare(b.grade));
   if (!rows.length) return `<div class="empty">${t('hrNone')}</div>`;
 
+  // Phone and actions are admin only. Campus is not shown in this table.
+  const admin = state.role === 'admin';
+  const dayHead = ['ថ្ងៃចន្ទ (Mon)', 'ថ្ងៃអង្គារ (Tue)', 'ថ្ងៃពុធ (Wed)', 'ថ្ងៃព្រហស្បតិ៍ (Thu)', 'ថ្ងៃសុក្រ (Fri)'];
   let body = '';
-  let lastCampus = null;
-  rows.forEach((r, i) => {
-    if (r.campus !== lastCampus) {
-      lastCampus = r.campus;
-      body += `<tr><td colspan="6" class="campus-row">${esc(r.campus || '')}</td></tr>`;
-    }
+  rows.forEach(r => {
     body += `<tr>
-      <td class="idx">${i + 1}</td>
-      <td><span class="grade-pill">${esc(r.grade)}</span></td>
-      <td><button class="hr-name" data-hr="${esc(r.id)}">${esc(r.name_en)}</button></td>
-      <td>${esc(r.name_km)}</td>
+      <td><button class="hr-name hr-stack" data-hr="${esc(r.id)}"><span class="hr-km">${esc(r.name_km)}</span><span class="hr-en">${esc(r.name_en)}</span></button></td>
+      <td>${esc(r.subject)}</td>
+      ${admin ? `<td>${esc(r.phone)}</td>` : ''}
       ${hrDutyCells(r)}
     </tr>`;
   });
-  return `<div class="table-wrap"><table><thead><tr>
-      <th>${t('no')}</th><th>${t('hrClass')}</th><th>${t('hrTeacherEn')}</th><th>${t('hrTeacherKm')}</th>
-      <th>${t('ttDutyCol')}</th><th>${t('ttActCol')}</th>
+  return `<div class="table-wrap"><table class="hr-duty"><thead><tr>
+      <th>ឈ្មោះគ្រូបន្ទុកថ្នាក់</th><th>មុខវិជ្ជា</th>${admin ? '<th>លេខទូរស័ព្ទ (Phone)</th>' : ''}
+      ${dayHead.map(d => `<th>${d}</th>`).join('')}
+      <th>ម៉ោងសរុប</th>${admin ? '<th>សកម្មភាព</th>' : ''}
     </tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
 }
