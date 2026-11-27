@@ -675,6 +675,17 @@ function renderHomeroom() {
     .sort((a, b) => gradeKey(a.grade) - gradeKey(b.grade) || a.grade.localeCompare(b.grade));
   if (!rows.length) return `<div class="empty">${t('hrNone')}</div>`;
 
+  // Summary pills for the selected semester (not affected by the search box).
+  const all = state.hr.rows.filter(r => hrCombo(r) === state.hr.sel);
+  const doneCount = all.filter(r => (state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`]?.n || 0) >= HR_DUTY_TOTAL).length;
+  const svgUsers = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3zM8 11c1.7 0 3-1.3 3-3S9.7 5 8 5 5 6.3 5 8s1.3 3 3 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-1 .1 1.2.9 2 2 2 3.4V19h6v-2.5c0-2.3-4.7-3.5-7-3.5z"/></svg>`;
+  const svgDone = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-2 15l-5-5 1.4-1.4L10 14.2l7.6-7.6L19 8z"/></svg>`;
+  const svgPending = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+  const statsHtml = `<div class="hr-stats">
+      <span class="hr-stat">${svgUsers}<span>គ្រូបន្ទុកសរុប: <b>${all.length}</b> នាក់</span></span>
+      <span class="hr-stat ok">${svgDone}<span>បានដាក់ម៉ោងរួច: <b>${doneCount}</b> នាក់</span></span>
+      <span class="hr-stat pending">${svgPending}<span>មិនទាន់ដាក់ម៉ោង: <b>${all.length - doneCount}</b> នាក់</span></span>
+    </div>`;
   // Phone and actions are admin only. Campus is not shown in this table.
   const admin = state.role === 'admin';
   const dayHead = ['ថ្ងៃចន្ទ (Mon)', 'ថ្ងៃអង្គារ (Tue)', 'ថ្ងៃពុធ (Wed)', 'ថ្ងៃព្រហស្បតិ៍ (Thu)', 'ថ្ងៃសុក្រ (Fri)'];
@@ -689,7 +700,7 @@ function renderHomeroom() {
       ${hrDutyCells(r)}
     </tr>`;
   });
-  return `<div class="table-wrap"><table class="hr-duty"><thead><tr>
+  return `${statsHtml}<div class="table-wrap"><table class="hr-duty"><thead><tr>
       <th>ល.រ</th><th>ថ្នាក់</th><th>ឈ្មោះគ្រូបន្ទុកថ្នាក់</th><th>មុខវិជ្ជា</th>${admin ? '<th>លេខទូរស័ព្ទ (Phone)</th>' : ''}
       ${dayHead.map(d => `<th>${d}</th>`).join('')}
       <th>ម៉ោងសរុប</th>${admin ? '<th>សកម្មភាព</th>' : ''}

@@ -109,6 +109,13 @@ table.hr-duty thead th{white-space:nowrap}
 .hr-stack:hover .hr-en{text-decoration:underline}
 .class-pill{display:inline-block;min-width:52px;text-align:center;padding:7px 12px;border-radius:10px;background:#e0e7ff;color:#3730a3;font-weight:700}
 [data-theme=dark] .class-pill{background:#312e81;color:#c7d2fe}
+.hr-stats{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+.hr-stat{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:#fff;color:#334155;font-size:14px}
+.hr-stat b{font-size:16px}
+.hr-stat.ok{background:#f0fdf4;border-color:#86efac;color:#166534}
+.hr-stat.pending{color:#64748b}
+[data-theme=dark] .hr-stat{background:#0f172a;color:#cbd5e1}
+[data-theme=dark] .hr-stat.ok{background:#052e16;border-color:#166534;color:#bbf7d0}
 .hr-line{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
 .hr-line:last-child{border-bottom:0}
 .hr-label{color:var(--muted);font-size:14px}
