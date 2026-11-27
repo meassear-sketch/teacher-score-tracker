@@ -34,6 +34,7 @@ const STR = {
     hrClass: 'ថ្នាក់', hrTeacherEn: 'គ្រូបន្ទុក (EN)', hrTeacherKm: 'គ្រូបន្ទុក (ខ្មែរ)', hrCount: 'ចំនួនថ្នាក់',
     phone: 'លេខទូរស័ព្ទ',
     ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
+    ttSave: 'រក្សាទុកម៉ោង', ttSaved: 'បានរក្សាទុកម៉ោងការងារបន្ទុកថ្នាក់',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
     hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
     hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
@@ -70,6 +71,7 @@ const STR = {
     hrClass: 'Class', hrTeacherEn: 'Homeroom teacher (EN)', hrTeacherKm: 'Homeroom teacher (Khmer)', hrCount: 'Classes',
     phone: 'Phone',
     ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
+    ttSave: 'Save hours', ttSaved: 'Homeroom duty hours saved',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
     hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
     hrImported: 'Homeroom teachers imported',
@@ -637,24 +639,56 @@ const TT_UI_DAYS = ['ថ្ងៃចន្ទ', 'ថ្ងៃអង្គារ'
 const TT_UI_PERIODS = ['8:00-8:50 AM', '9:00-9:50 AM', '10:00-10:50 AM', '11:00-11:50 AM',
   '1:00-1:50 PM', '2:00-2:50 PM', '3:00-3:50 PM', '4:00-4:50 PM'];
 
-// One row per weekday. The dropdown lists the teacher's periods that day (read-only).
-// rows = timetable slots of one academic year + semester.
-function ttGridHtml(rows) {
+// One row per weekday: the homeroom duty period (admin picks and saves it).
+// rows = the teacher's timetable slots, shown under each dropdown as a hint.
+// duty = saved picks [{ day, period }]. editable = admin only.
+function ttDutyHtml(rows, duty, editable) {
   const byDay = {};
   rows.forEach(x => { (byDay[x.day] = byDay[x.day] || []).push(x); });
+  const dutyBy = {};
+  duty.forEach(d => { dutyBy[d.day] = d.period; });
   const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm13 8H4v10h16V10z"/></svg>`;
   const body = TT_DAYS.map((day, i) => {
-    const list = (byDay[day] || []).slice().sort((a, b) => a.period - b.period);
-    const opts = list.map(x => `<option>${TT_UI_PERIODS[x.period - 1]} · ${esc(x.subject)} ${esc(x.grade)}</option>`).join('');
-    const select = list.length
-      ? `<select class="tt-select"><option value="">-- ជ្រើសរើសម៉ោង --</option>${opts}</select>`
-      : `<select class="tt-select" disabled><option>-- គ្មានម៉ោង --</option></select>`;
-    return `<tr><td><span class="tt-day">${icon}${TT_UI_DAYS[i]}</span></td><td>${select}</td></tr>`;
+    const teach = (byDay[day] || []).slice().sort((a, b) => a.period - b.period)
+      .map(x => `${TT_UI_PERIODS[x.period - 1]} · ${esc(x.subject)} ${esc(x.grade)}`).join('<br>');
+    const opts = TT_UI_PERIODS.map((label, p) =>
+      `<option value="${p + 1}"${dutyBy[day] === p + 1 ? ' selected' : ''}>${label}</option>`).join('');
+    const select = `<select class="tt-select" data-day="${day}"${editable ? '' : ' disabled'}>
+      <option value="">-- ជ្រើសរើសម៉ោង --</option>${opts}</select>`;
+    return `<tr><td><span class="tt-day">${icon}${TT_UI_DAYS[i]}</span></td>
+      <td>${select}${teach ? `<div class="tt-hint">${teach}</div>` : ''}</td></tr>`;
   }).join('');
   return `<div class="tt-wrap"><table class="tt"><thead><tr>
       <th>ថ្ងៃ (Day)</th><th>ម៉ោងការងារបន្ទុកថ្នាក់ (Drop List)</th>
     </tr></thead><tbody>${body}</tbody></table></div>
-    <div class="legend">${t('ttTotal')}: ${rows.length}</div>`;
+    ${editable ? `<div class="tt-actions"><button class="btn" type="button" id="ttSave">${t('ttSave')}</button></div>` : ''}
+    ${rows.length ? `<div class="legend">${t('ttTotal')}: ${rows.length}</div>` : ''}`;
+}
+
+// Saves the duty periods of one homeroom teacher for the selected academic year + semester.
+// Replaces the teacher's previous picks: delete, then insert the days that have a period.
+async function saveHrDuty(r, ay, sem) {
+  if (guardWrite()) return;
+  const key = teacherKey(r.name_en);
+  const picks = [...$('ttBox').querySelectorAll('.tt-select')]
+    .map(s => ({ day: s.dataset.day, period: Number(s.value) }))
+    .filter(p => p.period);
+  const btn = $('ttSave');
+  if (btn) btn.disabled = true;
+  try {
+    const del = await sb.from('homeroom_duty').delete()
+      .eq('academic_year', ay).eq('semester', sem).eq('teacher_key', key);
+    if (del.error) return fail(del.error);
+    if (picks.length) {
+      const ins = await sb.from('homeroom_duty').insert(picks.map(p => ({
+        academic_year: ay, semester: sem, teacher_key: key, day: p.day, period: p.period
+      })));
+      if (ins.error) return fail(ins.error);
+    }
+    toast(t('ttSaved'));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 let hrDlgSeq = 0;
@@ -676,18 +710,28 @@ async function openHrDialog(id) {
   $('hrDlgBody').innerHTML = html;
   $('hrDlg').showModal();
 
-  const { data, error } = await sb.from('teacher_timetable')
-    .select('academic_year, semester, day, period, grade, subject')
-    .eq('teacher_key', teacherKey(r.name_en));
+  const [ay, smStr] = state.hr.sel.split('|');
+  const sem = Number(smStr) || 1;
+  const key = teacherKey(r.name_en);
+  const [tt, duty] = await Promise.all([
+    sb.from('teacher_timetable')
+      .select('academic_year, semester, day, period, grade, subject')
+      .eq('teacher_key', key),
+    sb.from('homeroom_duty')
+      .select('day, period')
+      .eq('academic_year', ay).eq('semester', sem).eq('teacher_key', key)
+  ]);
   if (seq !== hrDlgSeq) return; // another teacher was opened meanwhile
   const box = $('ttBox');
-  if (error) { box.innerHTML = `<div class="empty">${t('hrError')}</div>`; return; }
-  if (!data || !data.length) { box.innerHTML = `<div class="empty">${t('ttNone')}</div>`; return; }
-  // Show the latest academic year and semester that has data for this teacher.
+  if (tt.error || duty.error) { box.innerHTML = `<div class="empty">${t('hrError')}</div>`; return; }
+  // Hints use the latest academic year and semester that has timetable data for this teacher.
+  const data = tt.data || [];
   const latest = data.reduce((best, x) =>
-    (x.academic_year > best.academic_year || (x.academic_year === best.academic_year && x.semester > best.semester)) ? x : best, data[0]);
-  const rows = data.filter(x => x.academic_year === latest.academic_year && x.semester === latest.semester);
-  box.innerHTML = ttGridHtml(rows);
+    (!best || x.academic_year > best.academic_year || (x.academic_year === best.academic_year && x.semester > best.semester)) ? x : best, null);
+  const rows = latest ? data.filter(x => x.academic_year === latest.academic_year && x.semester === latest.semester) : [];
+  box.innerHTML = ttDutyHtml(rows, duty.data || [], state.role === 'admin');
+  const btn = $('ttSave');
+  if (btn) btn.onclick = () => saveHrDuty(r, ay, sem);
 }
 
 // Replaces one academic year + semester with the classes in the chosen Excel file.
