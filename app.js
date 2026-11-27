@@ -618,9 +618,12 @@ async function clearHrDuty(id) {
 }
 
 // Two table cells per teacher: duty-hour count (pill) and actions (admin only).
+const HR_DUTY_TOTAL = 2; // duty hours each homeroom teacher must set per week
+
 function hrDutyCells(r) {
   const n = state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`] || 0;
-  const pill = `<td><span class="duty-pill${n ? ' ok' : ''}">${n ? '✓ ' : ''}${n}/5 ${t('ttHours')}</span></td>`;
+  const done = n >= HR_DUTY_TOTAL;
+  const pill = `<td><span class="duty-pill${done ? ' ok' : ''}">${done ? '✓ ' : ''}${n}/${HR_DUTY_TOTAL} ${t('ttHours')}</span></td>`;
   let actions = '';
   if (state.role === 'admin') {
     const pencil = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
@@ -666,20 +669,19 @@ function renderHomeroom() {
   rows.forEach((r, i) => {
     if (r.campus !== lastCampus) {
       lastCampus = r.campus;
-      body += `<tr><td colspan="7" class="campus-row">${esc(r.campus || '')}</td></tr>`;
+      body += `<tr><td colspan="6" class="campus-row">${esc(r.campus || '')}</td></tr>`;
     }
     body += `<tr>
       <td class="idx">${i + 1}</td>
       <td><span class="grade-pill">${esc(r.grade)}</span></td>
       <td><button class="hr-name" data-hr="${esc(r.id)}">${esc(r.name_en)}</button></td>
       <td>${esc(r.name_km)}</td>
-      <td class="muted">${esc(r.remark)}</td>
       ${hrDutyCells(r)}
     </tr>`;
   });
   return `<div class="table-wrap"><table><thead><tr>
       <th>${t('no')}</th><th>${t('hrClass')}</th><th>${t('hrTeacherEn')}</th><th>${t('hrTeacherKm')}</th>
-      <th>${t('remark')}</th><th>${t('ttDutyCol')}</th><th>${t('ttActCol')}</th>
+      <th>${t('ttDutyCol')}</th><th>${t('ttActCol')}</th>
     </tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
 }
@@ -737,6 +739,7 @@ async function saveHrDuty(r, ay, sem) {
     }
     await loadHrDuty();
     render();
+    $('hrDlg').close();
     toast(t('ttSaved'));
   } finally {
     if (btn) btn.disabled = false;
