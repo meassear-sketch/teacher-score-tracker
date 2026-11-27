@@ -35,6 +35,8 @@ const STR = {
     phone: 'លេខទូរស័ព្ទ',
     ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
     ttSave: 'រក្សាទុកម៉ោង', ttSaved: 'បានរក្សាទុកម៉ោងការងារបន្ទុកថ្នាក់',
+    ttDutyCol: 'ម៉ោងសរុប', ttActCol: 'សកម្មភាព', ttHours: 'ម៉ោង', ttEditHours: 'កែម៉ោង', ttSetHours: 'កំណត់ម៉ោង',
+    ttClear: 'លុបម៉ោងការងារ', ttClearConfirm: 'លុបម៉ោងការងារបន្ទុកថ្នាក់របស់គ្រូនេះទាំងអស់?', ttCleared: 'បានលុបម៉ោងការងារ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
     hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
     hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
@@ -72,6 +74,8 @@ const STR = {
     phone: 'Phone',
     ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
     ttSave: 'Save hours', ttSaved: 'Homeroom duty hours saved',
+    ttDutyCol: 'Duty hours', ttActCol: 'Actions', ttHours: 'hrs', ttEditHours: 'Edit hours', ttSetHours: 'Set hours',
+    ttClear: 'Delete duty hours', ttClearConfirm: 'Delete all homeroom duty hours of this teacher?', ttCleared: 'Duty hours deleted',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
     hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
     hrImported: 'Homeroom teachers imported',
@@ -84,7 +88,7 @@ const state = {
   theme: localStorage.getItem('theme') || 'light',
   filter: 'all', view: 'table', search: '', sort: 'name',
   teachers: [], settings: {}, editId: null, role: 'admin',
-  hr: { rows: [], sel: null, error: false }
+  hr: { rows: [], sel: null, error: false, duty: {} }
 };
 
 const t = k => (STR[state.lang][k] ?? k);
@@ -355,6 +359,8 @@ $('content').addEventListener('change', e => {
 });
 
 $('content').addEventListener('click', e => {
+  const dc = e.target.closest('[data-duty-clear]');
+  if (dc) return clearHrDuty(dc.dataset.dutyClear);
   const hr = e.target.closest('[data-hr]');
   if (hr) return openHrDialog(hr.dataset.hr);
   const ed = e.target.closest('[data-edit]');
@@ -581,7 +587,50 @@ async function loadHomeroom() {
   }
   state.hr.rows = data || [];
   state.hr.error = false;
+  await loadHrDuty();
   renderHrControls();
+}
+
+// Counts the saved duty days per homeroom teacher: key = "academic_year|semester|teacher_key".
+async function loadHrDuty() {
+  const { data, error } = await sb.from('homeroom_duty').select('academic_year, semester, teacher_key').limit(5000);
+  if (error) { console.error(error); state.hr.duty = {}; return; }
+  const map = {};
+  (data || []).forEach(d => {
+    const k = `${d.academic_year}|${d.semester}|${d.teacher_key}`;
+    map[k] = (map[k] || 0) + 1;
+  });
+  state.hr.duty = map;
+}
+
+// Deletes all duty hours of one homeroom teacher for the selected academic year + semester.
+async function clearHrDuty(id) {
+  if (guardWrite()) return;
+  const r = state.hr.rows.find(x => String(x.id) === String(id));
+  if (!r || !confirm(t('ttClearConfirm'))) return;
+  const [ay, sem] = hrCombo(r).split('|');
+  const del = await sb.from('homeroom_duty').delete()
+    .eq('academic_year', ay).eq('semester', Number(sem)).eq('teacher_key', teacherKey(r.name_en));
+  if (del.error) return fail(del.error);
+  await loadHrDuty();
+  render();
+  toast(t('ttCleared'));
+}
+
+// Two table cells per teacher: duty-hour count (pill) and actions (admin only).
+function hrDutyCells(r) {
+  const n = state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`] || 0;
+  const pill = `<td><span class="duty-pill${n ? ' ok' : ''}">${n ? '✓ ' : ''}${n}/5 ${t('ttHours')}</span></td>`;
+  let actions = '';
+  if (state.role === 'admin') {
+    const pencil = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
+    const trash = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
+    actions = `<div class="duty-actions">
+        <button class="btn ghost sm" type="button" data-hr="${esc(r.id)}">${pencil}${n ? t('ttEditHours') : t('ttSetHours')}</button>
+        ${n ? `<button class="btn ghost sm duty-del" type="button" data-duty-clear="${esc(r.id)}" title="${t('ttClear')}">${trash}</button>` : ''}
+      </div>`;
+  }
+  return pill + `<td>${actions}</td>`;
 }
 
 // Fills the year/semester dropdown: years found in the data, plus the current year's two semesters.
@@ -617,7 +666,7 @@ function renderHomeroom() {
   rows.forEach((r, i) => {
     if (r.campus !== lastCampus) {
       lastCampus = r.campus;
-      body += `<tr><td colspan="5" class="campus-row">${esc(r.campus || '')}</td></tr>`;
+      body += `<tr><td colspan="7" class="campus-row">${esc(r.campus || '')}</td></tr>`;
     }
     body += `<tr>
       <td class="idx">${i + 1}</td>
@@ -625,11 +674,12 @@ function renderHomeroom() {
       <td><button class="hr-name" data-hr="${esc(r.id)}">${esc(r.name_en)}</button></td>
       <td>${esc(r.name_km)}</td>
       <td class="muted">${esc(r.remark)}</td>
+      ${hrDutyCells(r)}
     </tr>`;
   });
   return `<div class="table-wrap"><table><thead><tr>
       <th>${t('no')}</th><th>${t('hrClass')}</th><th>${t('hrTeacherEn')}</th><th>${t('hrTeacherKm')}</th>
-      <th>${t('remark')}</th>
+      <th>${t('remark')}</th><th>${t('ttDutyCol')}</th><th>${t('ttActCol')}</th>
     </tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
 }
@@ -685,6 +735,8 @@ async function saveHrDuty(r, ay, sem) {
       })));
       if (ins.error) return fail(ins.error);
     }
+    await loadHrDuty();
+    render();
     toast(t('ttSaved'));
   } finally {
     if (btn) btn.disabled = false;
