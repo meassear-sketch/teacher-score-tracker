@@ -36,6 +36,7 @@ const STR = {
     phone: 'លេខទូរស័ព្ទ',
     ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
     ttSave: 'រក្សាទុកម៉ោង', ttSaved: 'បានរក្សាទុកម៉ោងការងារបន្ទុកថ្នាក់',
+    hrEdSave: 'រក្សាទុកព័ត៌មាន', hrEdSaved: 'បានរក្សាទុកព័ត៌មានគ្រូ', hrEdNameReq: 'សូមបញ្ចូលឈ្មោះគ្រូ (EN)', hrEdNoRow: 'មិនអាចរក្សាទុកបាន',
     ttDutyCol: 'ម៉ោងសរុប', ttActCol: 'សកម្មភាព', ttHours: 'ម៉ោង', ttEditHours: 'កែម៉ោង', ttSetHours: 'កំណត់ម៉ោង',
     ttClear: 'លុបម៉ោងការងារ', ttClearConfirm: 'លុបម៉ោងការងារបន្ទុកថ្នាក់របស់គ្រូនេះទាំងអស់?', ttCleared: 'បានលុបម៉ោងការងារ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
@@ -76,6 +77,7 @@ const STR = {
     phone: 'Phone',
     ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
     ttSave: 'Save hours', ttSaved: 'Homeroom duty hours saved',
+    hrEdSave: 'Save details', hrEdSaved: 'Teacher details saved', hrEdNameReq: 'Please enter the teacher name (EN)', hrEdNoRow: 'Could not save',
     ttDutyCol: 'Duty hours', ttActCol: 'Actions', ttHours: 'hrs', ttEditHours: 'Edit hours', ttSetHours: 'Set hours',
     ttClear: 'Delete duty hours', ttClearConfirm: 'Delete all homeroom duty hours of this teacher?', ttCleared: 'Duty hours deleted',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
@@ -774,6 +776,42 @@ async function saveHrDuty(r, ay, sem) {
   }
 }
 
+// Admin saves a homeroom teacher's name, subject and phone. If the English name changes,
+// the teacher's saved duty hours move to the new name so they are not lost.
+async function saveHrInfo(r) {
+  if (guardWrite()) return;
+  const val = id => $(id).value.replace(/\s+/g, ' ').trim();
+  const name_en = val('hrEdEn');
+  if (!name_en) return toast(t('hrEdNameReq'));
+  const payload = {
+    name_en,
+    name_km: val('hrEdKm') || null,
+    subject: val('hrEdSubj') || null,
+    phone: val('hrEdPhone') || null
+  };
+  const btn = $('hrEdSave');
+  if (btn) btn.disabled = true;
+  try {
+    const up = await sb.from('homeroom_assignments').update(payload).eq('id', r.id).select('id');
+    if (up.error) return fail(up.error);
+    if (!up.data || !up.data.length) return toast(t('hrEdNoRow'));
+    const oldKey = teacherKey(r.name_en);
+    const newKey = teacherKey(name_en);
+    if (oldKey !== newKey) {
+      const [ay, sm] = hrCombo(r).split('|');
+      const mv = await sb.from('homeroom_duty').update({ teacher_key: newKey })
+        .eq('academic_year', ay).eq('semester', Number(sm)).eq('teacher_key', oldKey);
+      if (mv.error) return fail(mv.error);
+    }
+    Object.assign(r, payload);
+    await loadHomeroom(); // refreshes the table rows and duty counts
+    render();
+    toast(t('hrEdSaved'));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 let hrDlgSeq = 0;
 
 // Pop-up for a homeroom teacher: subject, phone (admin only) and the weekly timetable.
@@ -787,10 +825,23 @@ async function openHrDialog(id) {
       <span class="hr-label">${esc(label)}</span>
       <span class="hr-val ${big ? 'big' : ''}">${esc(val) || '—'}</span>
     </div>`;
-  let html = line(t('hrTeacherEn'), r.name_en, true) + line(t('hrTeacherKm'), r.name_km) + line(t('subject'), r.subject);
-  if (state.role === 'admin') html += line(t('phone'), r.phone);
+  let html;
+  if (state.role === 'admin') {
+    // Admin can change the teacher's details here.
+    html = `<div class="hr-edit">
+      <label>${esc(t('hrTeacherEn'))}<input id="hrEdEn" value="${esc(r.name_en)}"></label>
+      <label>${esc(t('hrTeacherKm'))}<input id="hrEdKm" value="${esc(r.name_km)}"></label>
+      <label>${esc(t('subject'))}<input id="hrEdSubj" value="${esc(r.subject)}"></label>
+      <label>${esc(t('phone'))}<input id="hrEdPhone" value="${esc(r.phone)}" inputmode="tel"></label>
+      <div class="tt-actions"><button class="btn primary" type="button" id="hrEdSave">${esc(t('hrEdSave'))}</button></div>
+    </div>`;
+  } else {
+    html = line(t('hrTeacherEn'), r.name_en, true) + line(t('hrTeacherKm'), r.name_km) + line(t('subject'), r.subject);
+  }
   html += `<div id="ttBox"></div>`;
   $('hrDlgBody').innerHTML = html;
+  const edBtn = $('hrEdSave');
+  if (edBtn) edBtn.onclick = () => saveHrInfo(r);
   $('hrDlg').showModal();
 
   const [ay, smStr] = state.hr.sel.split('|');
