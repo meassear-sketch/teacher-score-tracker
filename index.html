@@ -104,6 +104,8 @@ table.tt td:last-child{width:100%}
 .duty-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .duty-actions .btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .duty-del{color:#dc2626;border-color:#dc2626}
+.view-banner{width:100%;padding:6px;margin-top:8px;justify-content:center;background:#4f46e5;border-radius:12px;overflow:hidden}
+.view-banner img{display:block;width:100%;height:auto}
 .duty-slot{display:inline-flex;align-items:center;gap:6px;background:#fef9c3;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;white-space:nowrap}
 [data-theme=dark] .duty-slot{background:#422006;border-color:#a16207;color:#fde68a}
 table.hr-duty td{vertical-align:middle}
@@ -253,8 +255,8 @@ table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-sh
     <input type="password" id="gatePass" autocomplete="current-password" required style="width:100%;text-align:center;font-size:18px;letter-spacing:4px" />
     <p id="gateErr" style="color:var(--red);min-height:22px;margin:8px 0"></p>
     <button class="btn primary" type="submit" style="width:100%;justify-content:center">ចូល / Enter</button>
-    <button class="btn ghost" type="button" id="viewTrackBtn" data-view-only="table" style="width:100%;justify-content:center;margin-top:8px">👁️ មើលតាមដានការប្រគល់ពិន្ទុ (មើលតែ)</button>
-    <button class="btn ghost" type="button" id="viewHrBtn" data-view-only="homeroom" style="width:100%;justify-content:center;margin-top:8px">👁️ មើលគ្រូបន្ទុកថ្នាក់ (មើលតែ)</button>
+    <button class="btn ghost view-banner" type="button" id="viewTrackBtn" data-view-only="table" title="មើលតែ / View only"><img src="view-tracker.png" alt="ប្រព័ន្ធតាមដានការប្រគល់ពិន្ទុរបស់គ្រូ (មើលតែ)"></button>
+    <button class="btn ghost view-banner" type="button" id="viewHrBtn" data-view-only="homeroom" title="មើលតែ / View only"><img src="view-homeroom.png" alt="ប្រព័ន្ធតាមដានគ្រូបន្ទុក (មើលតែ)"></button>
   </form>
 </div>
 
