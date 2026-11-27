@@ -29,6 +29,12 @@ const STR = {
     confirmDel: 'លុបគ្រូនេះមែនទេ?', confirmReset: 'កំណត់ថ្ងៃបានប្រគល់ទាំងអស់ឲ្យទៅទទេមែនទេ?', confirmClear: 'លុបគ្រូទាំងអស់មែនទេ? មិនអាចត្រឡប់វិញបានទេ!',
     importDone: 'បញ្ចូលរួច', noRows: 'File គ្មានទិន្នន័យ', viewerNo: 'អ្នកមើលមិនអាចកែប្រែបានទេ',
     signOut: 'ត្រឡប់ទៅចូលប្រើ',
+    vHome: 'គ្រូបន្ទុកថ្នាក់', hrImport: 'នាំចូលគ្រូបន្ទុកថ្នាក់ (Excel)', hrSearch: 'ស្វែងរកថ្នាក់ ឬឈ្មោះគ្រូ...',
+    hrNone: 'មិនមានទិន្នន័យគ្រូបន្ទុកថ្នាក់', hrError: 'ទាញទិន្នន័យគ្រូបន្ទុកថ្នាក់មិនបាន (ពិនិត្យ database)',
+    hrClass: 'ថ្នាក់', hrTeacherEn: 'គ្រូបន្ទុក (EN)', hrTeacherKm: 'គ្រូបន្ទុក (ខ្មែរ)', hrCount: 'ចំនួនថ្នាក់',
+    hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
+    hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
+    hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
     chartTitle: 'សមាមាត្រតាមមុខវិជ្ជា', lgOn: 'រួច', lgLate: 'យឺត', lgNot: 'មិនទាន់'
   },
   en: {
@@ -57,6 +63,12 @@ const STR = {
     confirmDel: 'Delete this teacher?', confirmReset: 'Clear all submission dates?', confirmClear: 'Delete ALL teachers? This cannot be undone!',
     importDone: 'Imported', noRows: 'File has no rows', viewerNo: 'View-only access',
     signOut: 'Back to sign-in',
+    vHome: 'Homeroom teachers', hrImport: 'Import homeroom (Excel)', hrSearch: 'Search class or teacher...',
+    hrNone: 'No homeroom data yet', hrError: 'Could not load homeroom data (check database)',
+    hrClass: 'Class', hrTeacherEn: 'Homeroom teacher (EN)', hrTeacherKm: 'Homeroom teacher (Khmer)', hrCount: 'Classes',
+    hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
+    hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
+    hrImported: 'Homeroom teachers imported',
     chartTitle: 'Status by subject', lgOn: 'On time', lgLate: 'Late', lgNot: 'Not submitted'
   }
 };
@@ -65,7 +77,8 @@ const state = {
   lang: localStorage.getItem('lang') || 'km',
   theme: localStorage.getItem('theme') || 'light',
   filter: 'all', view: 'table', search: '', sort: 'name',
-  teachers: [], settings: {}, editId: null, role: 'admin'
+  teachers: [], settings: {}, editId: null, role: 'admin',
+  hr: { rows: [], sel: null, error: false }
 };
 
 const t = k => (STR[state.lang][k] ?? k);
@@ -154,8 +167,17 @@ function render() {
   const counts = { all: c.total, ontime: c.ontime, late: c.late, notsub: c.notsub };
   document.querySelectorAll('[data-filter] .cnt').forEach(el => { el.textContent = counts[el.parentElement.dataset.filter]; });
 
+  // The homeroom view has its own list, so hide the teacher-only controls there.
+  const isHr = state.view === 'homeroom';
+  $('stats').style.display = isHr ? 'none' : '';
+  $('filterBar').style.display = isHr ? 'none' : '';
+  $('sort').style.display = isHr ? 'none' : '';
+  $('hrBar').style.display = isHr ? 'flex' : 'none';
+  $('search').placeholder = isHr ? t('hrSearch') : t('search');
+
   let html;
-  if (state.view === 'table') html = renderTable(visibleRows(rows));
+  if (isHr) html = renderHomeroom();
+  else if (state.view === 'table') html = renderTable(visibleRows(rows));
   else if (state.view === 'board') html = renderBoard(rows.filter(r => r.ev.key === 'notsub'));
   else html = renderCharts(rows);
   $('content').innerHTML = html;
@@ -257,6 +279,7 @@ async function loadAll() {
   $('dueDate').value = state.settings.due_date || '';
   $('calcDate').value = todayStr();
   setCloud('ok');
+  await loadHomeroom();
   render();
 }
 
@@ -336,6 +359,12 @@ document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { stat
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { state.view = b.dataset.view; render(); });
 $('search').oninput = e => { state.search = e.target.value; render(); };
 $('sort').onchange = e => { state.sort = e.target.value; render(); };
+$('hrSem').onchange = e => { state.hr.sel = e.target.value; render(); };
+$('hrFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) await importHomeroom(f);
+});
 
 $('applyDue').onclick = async () => {
   if (guardWrite()) return;
@@ -509,6 +538,103 @@ $('exportBtn').onclick = () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Scores');
   XLSX.writeFile(wb, `score-submission-${todayStr()}.xlsx`);
 };
+
+// ---- Homeroom teachers (គ្រូបន្ទុកថ្នាក់) ----
+const hrCombo = r => `${r.academic_year}|${r.semester}`;
+const gradeKey = g => { const m = /^(\d+)/.exec(g || ''); return m ? Number(m[1]) : 0; };
+
+async function loadHomeroom() {
+  const { data, error } = await sb.from('homeroom_assignments').select('*').order('grade');
+  if (error) {
+    console.error(error);
+    state.hr.rows = [];
+    state.hr.error = true;
+    return;
+  }
+  state.hr.rows = data || [];
+  state.hr.error = false;
+  renderHrControls();
+}
+
+// Fills the year/semester dropdown: years found in the data, plus the current year's two semesters.
+function renderHrControls() {
+  const combos = new Set(state.hr.rows.map(hrCombo));
+  const now = new Date();
+  const y = now.getFullYear();
+  const ay = now.getMonth() >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+  combos.add(`${ay}|1`);
+  combos.add(`${ay}|2`);
+  const list = [...combos].sort().reverse();
+  // Default to the latest semester that already has data.
+  const withData = [...new Set(state.hr.rows.map(hrCombo))].sort().reverse();
+  if (!list.includes(state.hr.sel)) state.hr.sel = withData[0] || list[0];
+  $('hrSem').innerHTML = list.map(c => {
+    const [a, s] = c.split('|');
+    return `<option value="${c}">${a} · ${t('hrSemLbl')} ${s}</option>`;
+  }).join('');
+  $('hrSem').value = state.hr.sel;
+}
+
+function renderHomeroom() {
+  if (state.hr.error) return `<div class="empty">${t('hrError')}</div>`;
+  const q = state.search.trim().toLowerCase();
+  const rows = state.hr.rows
+    .filter(r => hrCombo(r) === state.hr.sel)
+    .filter(r => !q || [r.grade, r.name_en, r.name_km, r.subject].some(v => (v || '').toLowerCase().includes(q)))
+    .sort((a, b) => gradeKey(a.grade) - gradeKey(b.grade) || a.grade.localeCompare(b.grade));
+  if (!rows.length) return `<div class="empty">${t('hrNone')}</div>`;
+
+  let body = '';
+  let lastCampus = null;
+  rows.forEach((r, i) => {
+    if (r.campus !== lastCampus) {
+      lastCampus = r.campus;
+      body += `<tr><td colspan="6" style="background:var(--bg);font-weight:700">${esc(r.campus || '')}</td></tr>`;
+    }
+    body += `<tr>
+      <td class="idx">${i + 1}</td>
+      <td><span class="code">${esc(r.grade)}</span></td>
+      <td><strong>${esc(r.name_en)}</strong></td>
+      <td>${esc(r.name_km)}</td>
+      <td>${esc(r.subject)}</td>
+      <td class="muted">${esc(r.remark)}</td>
+    </tr>`;
+  });
+  return `<div class="table-wrap"><table><thead><tr>
+      <th>${t('no')}</th><th>${t('hrClass')}</th><th>${t('hrTeacherEn')}</th><th>${t('hrTeacherKm')}</th>
+      <th>${t('subject')}</th><th>${t('remark')}</th>
+    </tr></thead><tbody>${body}</tbody></table></div>
+    <div class="legend">${t('hrCount')}: ${rows.length}</div>`;
+}
+
+// Replaces one academic year + semester with the classes in the chosen Excel file.
+// Each class has one homeroom teacher, and the database rejects a teacher listed twice.
+async function importHomeroom(file) {
+  if (guardWrite()) return;
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const res = parseHomeroomWorkbook(wb);
+  if (!res || !res.academic_year) return toast(t('hrBadFile'));
+
+  const sem = Number(state.hr.sel.split('|')[1]) || 1;
+  const msg = t('hrConfirm').replace('{y}', res.academic_year).replace('{s}', sem).replace('{n}', res.rows.length);
+  if (!confirm(msg)) return;
+
+  const del = await sb.from('homeroom_assignments').delete()
+    .eq('academic_year', res.academic_year).eq('semester', sem);
+  if (del.error) return fail(del.error);
+
+  const payload = res.rows.map(r => ({
+    academic_year: res.academic_year, semester: sem, campus: r.campus, grade: r.grade,
+    name_en: r.name_en, name_km: r.name_km, subject: r.subject, remark: r.remark
+  }));
+  const ins = await sb.from('homeroom_assignments').insert(payload);
+  if (ins.error) return fail(ins.error);
+
+  state.hr.sel = `${res.academic_year}|${sem}`;
+  await loadHomeroom();
+  render();
+  toast(`${t('hrImported')}: ${payload.length}`);
+}
 
 // ---- Roles: admin (full) and viewer (read-only, UI level) ----
 function setRole(r) {

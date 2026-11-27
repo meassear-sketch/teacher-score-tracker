@@ -69,6 +69,7 @@ dialog input,dialog textarea{width:100%}
 .empty{text-align:center;padding:40px;color:var(--muted)}
 /* View-only mode: hide every control that changes data */
 body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #applyDue,body.viewer #importLabel,body.viewer [data-edit],body.viewer [data-del]{display:none !important}
+body.viewer #hrImportLabel{display:none !important}
 @media (max-width:640px){dialog .grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -109,7 +110,7 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
   </div>
 </section>
 
-<section class="stats">
+<section class="stats" id="stats">
   <div class="card stat"><div class="lbl" data-i18n="total"></div><div class="num" id="sTotal">0</div><div class="lbl" id="sPct"></div></div>
   <div class="card stat g"><div class="lbl" data-i18n="onTime"></div><div class="num" id="sOn">0</div><div class="lbl" data-i18n="onTimeHint"></div></div>
   <div class="card stat a"><div class="lbl" data-i18n="late"></div><div class="num" id="sLate">0</div><div class="lbl" id="sLateAvg"></div></div>
@@ -118,7 +119,7 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
 
 <section class="card">
   <div class="toolbar">
-    <div class="chips">
+    <div class="chips" id="filterBar">
       <button class="chip" data-filter="all"><span data-i18n="fAll"></span> <b class="cnt"></b></button>
       <button class="chip" data-filter="ontime"><span data-i18n="fOn"></span> <b class="cnt"></b></button>
       <button class="chip" data-filter="late"><span data-i18n="fLate"></span> <b class="cnt"></b></button>
@@ -128,6 +129,7 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
       <button class="chip" data-view="table" data-i18n="vTable"></button>
       <button class="chip" data-view="board" data-i18n="vBoard"></button>
       <button class="chip" data-view="charts" data-i18n="vCharts"></button>
+      <button class="chip" data-view="homeroom" data-i18n="vHome"></button>
     </div>
   </div>
   <div class="toolbar" style="margin-top:0">
@@ -138,6 +140,14 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
       <option value="status" data-i18n="sortStatus"></option>
       <option value="days" data-i18n="sortDays"></option>
     </select>
+  </div>
+  <div id="hrBar" class="toolbar" style="display:none;margin-top:0">
+    <div class="actions">
+      <select id="hrSem"></select>
+    </div>
+    <div class="actions">
+      <label class="btn primary" id="hrImportLabel" style="cursor:pointer"><input type="file" id="hrFile" accept=".xls,.xlsx" hidden /><span data-i18n="hrImport"></span></label>
+    </div>
   </div>
   <div id="content"></div>
 </section>
@@ -179,6 +189,7 @@ body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #app
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="config.js"></script>
 <script src="timesheet.js"></script>
+<script src="homeroom.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
