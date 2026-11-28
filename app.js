@@ -829,7 +829,7 @@ function ttDutyHtml(rows, duty, editable) {
       <th>ថ្ងៃ (Day)</th><th>ម៉ោងការងារបន្ទុកថ្នាក់ (Drop List)</th>
     </tr></thead><tbody>${body}</tbody></table></div>
     ${editable ? `<div class="tt-actions"><button class="btn primary" type="button" id="ttSave">${t('ttSave')}</button></div>` : ''}
-    `;
+    <div class="legend" id="ttTotalLine">${t('ttTotal')}: ${duty.length} / ${HR_DUTY_TOTAL}</div>`;
 }
 
 // Saves the duty periods of one homeroom teacher for the selected academic year + semester.
@@ -951,6 +951,13 @@ async function openHrDialog(id) {
   box.innerHTML = ttDutyHtml(rows, duty.data || [], state.role === 'admin');
   const btn = $('ttSave');
   if (btn) btn.onclick = () => saveHrDuty(r, ay, sem);
+  // Total line at the bottom follows the picks as the admin changes them.
+  const refreshTotal = () => {
+    const n = [...box.querySelectorAll('.tt-select')].filter(s => s.value).length;
+    const el = $('ttTotalLine');
+    if (el) el.textContent = `${t('ttTotal')}: ${n} / ${HR_DUTY_TOTAL}`;
+  };
+  box.querySelectorAll('.tt-select').forEach(s => s.addEventListener('change', refreshTotal));
 }
 
 // Replaces one academic year + semester with the classes in the chosen Excel file.
