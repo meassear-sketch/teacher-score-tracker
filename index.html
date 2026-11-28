@@ -116,7 +116,7 @@ body.viewer .q-bk{display:none !important}
 .q-item input{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:14px;background:var(--card);color:inherit}
 .view-banner{width:100%;padding:6px;margin-top:8px;justify-content:center;background:#4f46e5;border-radius:12px;overflow:hidden}
 .view-banner img{display:block;width:100%;height:auto}
-.gate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100;padding:20px;overflow:auto;background:radial-gradient(900px 520px at 0% -10%,#7c3aed 0%,transparent 60%),radial-gradient(800px 480px at 110% 110%,#0d9488 0%,transparent 55%),linear-gradient(135deg,#1e1b4b,#312e81 55%,#1e3a5f)}
+.gate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100;padding:20px;overflow:auto;background:rgba(10,12,30,.92)}
 .gate-card{width:min(420px,94vw);background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:24px;padding:18px 22px 24px;box-shadow:0 30px 80px rgba(0,0,0,.35);text-align:center;animation:gateIn .35s ease both}
 @keyframes gateIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
 .gate-top{display:flex;justify-content:flex-end}
@@ -124,7 +124,7 @@ body.viewer .q-bk{display:none !important}
 .lang-seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
 .lang-seg button.on{background:var(--primary);color:#fff}
 .gate-logo{margin:4px auto 14px}
-.gate-logo img{display:block;width:168px;height:168px;margin:0 auto;object-fit:contain;border-radius:32px;background:none;box-shadow:none}
+.gate-logo img{display:block;width:168px;height:auto;margin:0 auto}
 .gate-title{margin:0;font-size:22px;font-weight:800}
 .gate-sub{margin:6px 0 18px;color:var(--muted);font-size:14px}
 .gate-field{position:relative;display:flex;align-items:center}
@@ -302,7 +302,7 @@ table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-sh
         <button type="button" data-gate-lang="en">English</button>
       </div>
     </div>
-    <div class="gate-logo"><img src="logo.png" alt="" /></div>
+    <div class="gate-logo"><img src="logo-gate.png" alt="" /></div>
     <h2 class="gate-title"><span data-i18n="gateTitle"></span></h2>
     <p class="gate-sub" data-i18n="gateSub"></p>
     <form id="gateForm" autocomplete="off">
