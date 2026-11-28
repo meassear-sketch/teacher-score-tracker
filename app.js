@@ -44,6 +44,10 @@ const STR = {
     ttClear: 'លុបម៉ោងការងារ', ttClearConfirm: 'លុបម៉ោងការងារបន្ទុកថ្នាក់របស់គ្រូនេះទាំងអស់?', ttCleared: 'បានលុបម៉ោងការងារ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
     hrBk: 'backup ឆមាស {s}', hrMk: 'បង្កើតឆមាស {s}',
+    gateTitle: 'ចូលប្រើប្រាស់', gateSub: 'សូមបញ្ចូលលេខសម្ងាត់ដើម្បីបន្ត', gatePh: 'លេខសម្ងាត់', gateShow: 'បង្ហាញ / លាក់',
+    gateEnter: 'ចូល', gateOr: 'ឬ', gateViewHint: 'មើលតែ (មិនត្រូវការលេខសម្ងាត់)', gateWrong: 'លេខសម្ងាត់មិនត្រឹមត្រូវ',
+    tileTrackT: 'ប្រព័ន្ធតាមដានការប្រគល់ពិន្ទុរបស់គ្រូ', tileTrackS: 'មើលតែ · ពិន្ទុ និងថ្ងៃប្រគល់',
+    tileHrT: 'ប្រព័ន្ធតាមដានគ្រូបន្ទុកថ្នាក់', tileHrS: 'មើលតែ · ម៉ោងការងារ និងបញ្ជីថ្នាក់',
     hrBkConfirm: 'បានទាញយក backup ឆមាស {s} រួចហើយ។ លុបម៉ោងការងារបន្ទុកថ្នាក់ក្នុងឆមាស {s} ឥឡូវ?', hrBkDone: 'បានលុបម៉ោងការងារឆមាស {s}',
     hrMkConfirm: 'បង្កើតឆមាស {s} ដោយចម្លងបញ្ជីថ្នាក់ពីឆមាស {o}?', hrMkExists: 'ឆមាស {s} មានទិន្នន័យរួចហើយ',
     hrMkDone: 'បានបង្កើតឆមាស {s} ជាមួយថ្នាក់ {n}', hrBkEmpty: 'មិនមានទិន្នន័យឆមាសនេះ',
@@ -92,6 +96,10 @@ const STR = {
     ttClear: 'Delete duty hours', ttClearConfirm: 'Delete all homeroom duty hours of this teacher?', ttCleared: 'Duty hours deleted',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
     hrBk: 'backup semester {s}', hrMk: 'Create semester {s}',
+    gateTitle: 'Sign in', gateSub: 'Enter the password to continue', gatePh: 'Password', gateShow: 'Show / hide',
+    gateEnter: 'Sign in', gateOr: 'or', gateViewHint: 'View only (no password needed)', gateWrong: 'Wrong password',
+    tileTrackT: 'Teacher Score Submission Tracker', tileTrackS: 'View only · scores and due dates',
+    tileHrT: 'Homeroom Teacher Tracker', tileHrS: 'View only · duty hours and class list',
     hrBkConfirm: 'Backup of semester {s} downloaded. Clear the duty hours of semester {s} now?', hrBkDone: 'Duty hours of semester {s} cleared',
     hrMkConfirm: 'Create semester {s} by copying the class list from semester {o}?', hrMkExists: 'Semester {s} already has data',
     hrMkDone: 'Semester {s} created with {n} classes', hrBkEmpty: 'No data for this semester',
@@ -169,6 +177,9 @@ function applyStatic() {
   document.documentElement.lang = state.lang;
   document.documentElement.setAttribute('data-theme', state.theme);
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', t(el.dataset.i18nTitle)); });
+  document.querySelectorAll('[data-gate-lang]').forEach(b => b.classList.toggle('on', b.dataset.gateLang === state.lang));
   // Homeroom view: shorter title and no subtitle line.
   const hrView = state.view === 'homeroom';
   document.querySelector('header h1').textContent = hrView ? t('titleHr') : t('title');
@@ -1075,9 +1086,25 @@ if (savedRole === 'admin' || savedRole === 'viewer') {
   setRole(savedRole);
   startApp();
 } else {
+  applyStatic();
   $('gate').style.display = 'flex';
   $('gatePass').focus();
 }
+
+// Language on the sign-in screen (shared with the header button). Foreign teachers pick English here.
+document.querySelectorAll('[data-gate-lang]').forEach(b => b.addEventListener('click', () => {
+  state.lang = b.dataset.gateLang;
+  try { localStorage.setItem('lang', state.lang); } catch (e) { /* storage blocked: keep the choice for this page only */ }
+  $('gateErr').textContent = '';
+  applyStatic();
+}));
+
+// Show or hide the typed password.
+$('gateEye').addEventListener('click', () => {
+  const p = $('gatePass');
+  p.type = p.type === 'password' ? 'text' : 'password';
+  p.focus();
+});
 
 $('gateForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1088,7 +1115,7 @@ $('gateForm').addEventListener('submit', async e => {
     $('gate').style.display = 'none';
     startApp();
   } else {
-    $('gateErr').textContent = 'Password មិនត្រឹមត្រូវ / Wrong password';
+    $('gateErr').textContent = t('gateWrong');
     $('gatePass').value = '';
     $('gatePass').focus();
   }
