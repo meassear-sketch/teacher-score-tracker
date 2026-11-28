@@ -743,9 +743,11 @@ function renderHrControls() {
   combos.add(`${ay}|1`);
   combos.add(`${ay}|2`);
   const list = [...combos].sort().reverse();
-  // Default to the latest semester that already has data.
+  // Default to semester 1 of the latest academic year that has data (keeps a choice made during the session).
   const withData = [...new Set(state.hr.rows.map(hrCombo))].sort().reverse();
-  if (!list.includes(state.hr.sel)) state.hr.sel = withData[0] || list[0];
+  const latestAy = (withData[0] || list[0]).split('|')[0];
+  const sem1 = `${latestAy}|1`;
+  if (!list.includes(state.hr.sel)) state.hr.sel = list.includes(sem1) ? sem1 : (withData[0] || list[0]);
   $('hrSem').innerHTML = list.map(c => {
     const [a, s] = c.split('|');
     return `<option value="${c}">${a} · ${t('hrSemLbl')} ${s}</option>`;
