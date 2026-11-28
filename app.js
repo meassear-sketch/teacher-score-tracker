@@ -36,6 +36,7 @@ const STR = {
     phone: 'លេខទូរស័ព្ទ',
     qRowLbl: 'ត្រីមាស (ថ្ងៃកំណត់)', qLabel1: 'ត្រីមាសទី១', qLabel2: 'ត្រីមាសទី២', qLabel3: 'ត្រីមាសទី៣', qLabel4: 'ត្រីមាសទី៤',
     qNone: 'សូមកំណត់ថ្ងៃសម្រាប់ត្រីមាសនេះជាមុនសិន',
+    bkBtn: 'backup', bkConfirm: 'បានទាញយក backup {q} រួចហើយ។ លុបទិន្នន័យការប្រគល់ពិន្ទុ (ថ្ងៃប្រគល់ ថ្ងៃកំណត់ កំណត់ចំណាំ) ឥឡូវ?', bkDone: 'បានលុបទិន្នន័យការប្រគល់ពិន្ទុ',
     ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
     ttSave: 'រក្សាទុកម៉ោង', ttSaved: 'បានរក្សាទុកម៉ោងការងារបន្ទុកថ្នាក់',
     hrEdSave: 'រក្សាទុកព័ត៌មាន', hrEdSaved: 'បានរក្សាទុកព័ត៌មានគ្រូ', hrEdNameReq: 'សូមបញ្ចូលឈ្មោះគ្រូ (EN)', hrEdNoRow: 'មិនអាចរក្សាទុកបាន',
@@ -79,6 +80,7 @@ const STR = {
     phone: 'Phone',
     qRowLbl: 'Quarters (due date)', qLabel1: 'Quarter 1', qLabel2: 'Quarter 2', qLabel3: 'Quarter 3', qLabel4: 'Quarter 4',
     qNone: 'Set a date for this quarter first',
+    bkBtn: 'backup', bkConfirm: 'Backup {q} downloaded. Clear submission data (submitted dates, due dates, remarks) now?', bkDone: 'Submission data cleared',
     ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
     ttSave: 'Save hours', ttSaved: 'Homeroom duty hours saved',
     hrEdSave: 'Save details', hrEdSaved: 'Teacher details saved', hrEdNameReq: 'Please enter the teacher name (EN)', hrEdNoRow: 'Could not save',
@@ -595,8 +597,9 @@ $('importFile').addEventListener('change', async e => {
   }
 });
 
-$('exportBtn').onclick = () => {
-  const data = visibleRows(computeRows()).map((r, i) => ({
+// Excel rows for the given score rows (the same columns for the export and the quarter backup).
+function scoreExportData(rows) {
+  return rows.map((r, i) => ({
     '#': i + 1,
     [t('nameEn')]: r.name_en,
     [t('nameKm')]: r.name_km || '',
@@ -608,11 +611,33 @@ $('exportBtn').onclick = () => {
     [t('days')]: dayLabel(r.ev),
     [t('remark')]: r.remark || ''
   }));
-  const ws = XLSX.utils.json_to_sheet(data);
+}
+
+$('exportBtn').onclick = () => {
+  const ws = XLSX.utils.json_to_sheet(scoreExportData(visibleRows(computeRows())));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Scores');
   XLSX.writeFile(wb, `score-submission-${todayStr()}.xlsx`);
 };
+
+// Quarter backup: download all teachers' data as Excel, then clear the submission data.
+// Teacher names, subjects and classes stay; submitted dates, due dates and remarks are cleared.
+async function backupQuarter(n) {
+  if (guardWrite()) return;
+  const ws = XLSX.utils.json_to_sheet(scoreExportData(computeRows()));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Q${n}`);
+  XLSX.writeFile(wb, `backup-Q${n}-${todayStr()}.xlsx`);
+  if (!confirm(t('bkConfirm').replace('{q}', t('qLabel' + n)))) return;
+  const { error } = await sb.from('teachers')
+    .update({ submitted_date: null, due_date: null, remark: null }).not('id', 'is', null);
+  if (error) return fail(error);
+  await saveSetting({ due_date: null });
+  await loadAll();
+  toast(t('bkDone'));
+}
+
+document.querySelectorAll('[data-qb]').forEach(b => b.addEventListener('click', () => backupQuarter(Number(b.dataset.qb))));
 
 // ---- Homeroom teachers (គ្រូបន្ទុកថ្នាក់) ----
 const hrCombo = r => `${r.academic_year}|${r.semester}`;

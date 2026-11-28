@@ -107,6 +107,9 @@ table.tt td:last-child{width:100%}
 .q-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}
 .q-label{font-size:13px;color:var(--muted);font-weight:600;align-self:center}
 .q-cap{font-size:13px;color:var(--muted);font-weight:600;padding:5px 0}
+.q-bk{margin-top:4px;align-self:flex-start;background:#fff7ed;color:#c2410c;border-color:#fdba74}
+[data-theme=dark] .q-bk{background:#431407;color:#fdba74;border-color:#9a3412}
+body.viewer .q-bk{display:none !important}
 .q-item{display:flex;flex-direction:column;gap:5px}
 .q-item input{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:14px;background:var(--card);color:inherit}
 .view-banner{width:100%;padding:6px;margin-top:8px;justify-content:center;background:#4f46e5;border-radius:12px;overflow:hidden}
@@ -168,10 +171,10 @@ table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-sh
 <section class="card" style="margin-top:16px">
   <div class="q-row" id="qRow">
     <span class="q-label" data-i18n="qRowLbl"></span>
-    <div class="q-item"><button class="btn ghost sm" type="button" data-q="1" data-i18n="qLabel1"></button><input type="date" id="qDate1" data-qd="1" /></div>
-    <div class="q-item"><button class="btn ghost sm" type="button" data-q="2" data-i18n="qLabel2"></button><input type="date" id="qDate2" data-qd="2" /></div>
-    <div class="q-item"><button class="btn ghost sm" type="button" data-q="3" data-i18n="qLabel3"></button><input type="date" id="qDate3" data-qd="3" /></div>
-    <div class="q-item"><button class="btn ghost sm" type="button" data-q="4" data-i18n="qLabel4"></button><input type="date" id="qDate4" data-qd="4" /></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="1" data-i18n="qLabel1"></button><input type="date" id="qDate1" data-qd="1" /><button class="btn ghost sm q-bk" type="button" data-qb="1" data-i18n="bkBtn"></button></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="2" data-i18n="qLabel2"></button><input type="date" id="qDate2" data-qd="2" /><button class="btn ghost sm q-bk" type="button" data-qb="2" data-i18n="bkBtn"></button></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="3" data-i18n="qLabel3"></button><input type="date" id="qDate3" data-qd="3" /><button class="btn ghost sm q-bk" type="button" data-qb="3" data-i18n="bkBtn"></button></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="4" data-i18n="qLabel4"></button><input type="date" id="qDate4" data-qd="4" /><button class="btn ghost sm q-bk" type="button" data-qb="4" data-i18n="bkBtn"></button></div>
     <div class="q-item"><span class="q-cap" data-i18n="calcLabel"></span><input type="date" id="calcDate" disabled title="ថ្ងៃនេះតាមម៉ាស៊ីន / Today from this computer" /></div>
   </div>
   <div class="toolbar" style="margin:0">
