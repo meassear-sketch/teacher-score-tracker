@@ -69,7 +69,9 @@ dialog input,dialog textarea{width:100%}
 .empty{text-align:center;padding:40px;color:var(--muted)}
 /* View-only mode: hide every control that changes data */
 body.viewer #addBtn,body.viewer #resetBtn,body.viewer #clearBtn,body.viewer #applyDue,body.viewer #importLabel,body.viewer [data-edit],body.viewer [data-del]{display:none !important}
-body.viewer #hrImportLabel{display:none !important}
+body.viewer #hrImportLabel,body.viewer .hr-admin{display:none !important}
+.hr-bk{background:#fff7ed;color:#c2410c;border-color:#fdba74}
+[data-theme=dark] .hr-bk{background:#431407;color:#fdba74;border-color:#9a3412}
 /* Homeroom section: eye-catching accents */
 .chip.hr{background:linear-gradient(120deg,#0d9488,#14b8a6);color:#fff;border-color:transparent}
 .chip.hr.on{background:linear-gradient(120deg,#f59e0b,#f97316);color:#fff}
@@ -223,6 +225,8 @@ table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-sh
   <div id="hrBar" class="toolbar" style="display:none;margin-top:0">
     <div class="actions">
       <select id="hrSem"></select>
+      <button class="btn ghost sm hr-bk hr-admin" type="button" id="hrBk"></button>
+      <button class="btn ghost sm hr-admin" type="button" id="hrMk"></button>
     </div>
     <div class="actions">
       <label class="btn primary" id="hrImportLabel" style="cursor:pointer"><input type="file" id="hrFile" accept=".xls,.xlsx" hidden /><span data-i18n="hrImport"></span></label>

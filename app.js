@@ -43,6 +43,10 @@ const STR = {
     ttDutyCol: 'ម៉ោងសរុប', ttActCol: 'សកម្មភាព', ttHours: 'ម៉ោង', ttEditHours: 'កែម៉ោង', ttSetHours: 'កំណត់ម៉ោង',
     ttClear: 'លុបម៉ោងការងារ', ttClearConfirm: 'លុបម៉ោងការងារបន្ទុកថ្នាក់របស់គ្រូនេះទាំងអស់?', ttCleared: 'បានលុបម៉ោងការងារ',
     hrSemLbl: 'ឆមាស', hrBadFile: 'ឯកសារនេះមិនមានទម្រង់គ្រូបន្ទុកថ្នាក់',
+    hrBk: 'backup ឆមាស {s}', hrMk: 'បង្កើតឆមាស {s}',
+    hrBkConfirm: 'បានទាញយក backup ឆមាស {s} រួចហើយ។ លុបម៉ោងការងារបន្ទុកថ្នាក់ក្នុងឆមាស {s} ឥឡូវ?', hrBkDone: 'បានលុបម៉ោងការងារឆមាស {s}',
+    hrMkConfirm: 'បង្កើតឆមាស {s} ដោយចម្លងបញ្ជីថ្នាក់ពីឆមាស {o}?', hrMkExists: 'ឆមាស {s} មានទិន្នន័យរួចហើយ',
+    hrMkDone: 'បានបង្កើតឆមាស {s} ជាមួយថ្នាក់ {n}', hrBkEmpty: 'មិនមានទិន្នន័យឆមាសនេះ',
     hrConfirm: 'ជំនួសទិន្នន័យឆ្នាំ {y} ឆមាស {s} ដោយថ្នាក់ {n} ពីឯកសារនេះ?',
     hrImported: 'បាននាំចូលគ្រូបន្ទុកថ្នាក់',
     chartTitle: 'សមាមាត្រតាមមុខវិជ្ជា', lgOn: 'រួច', lgLate: 'យឺត', lgNot: 'មិនទាន់'
@@ -87,6 +91,10 @@ const STR = {
     ttDutyCol: 'Duty hours', ttActCol: 'Actions', ttHours: 'hrs', ttEditHours: 'Edit hours', ttSetHours: 'Set hours',
     ttClear: 'Delete duty hours', ttClearConfirm: 'Delete all homeroom duty hours of this teacher?', ttCleared: 'Duty hours deleted',
     hrSemLbl: 'Semester', hrBadFile: 'This file is not in the homeroom teacher format',
+    hrBk: 'backup semester {s}', hrMk: 'Create semester {s}',
+    hrBkConfirm: 'Backup of semester {s} downloaded. Clear the duty hours of semester {s} now?', hrBkDone: 'Duty hours of semester {s} cleared',
+    hrMkConfirm: 'Create semester {s} by copying the class list from semester {o}?', hrMkExists: 'Semester {s} already has data',
+    hrMkDone: 'Semester {s} created with {n} classes', hrBkEmpty: 'No data for this semester',
     hrConfirm: 'Replace academic year {y}, semester {s} with {n} classes from this file?',
     hrImported: 'Homeroom teachers imported',
     chartTitle: 'Status by subject', lgOn: 'On time', lgLate: 'Late', lgNot: 'Not submitted'
@@ -388,6 +396,8 @@ document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { state.
 $('search').oninput = e => { state.search = e.target.value; render(); };
 $('sort').onchange = e => { state.sort = e.target.value; render(); };
 $('hrSem').onchange = e => { state.hr.sel = e.target.value; render(); };
+$('hrBk').onclick = () => backupHomeroom();
+$('hrMk').onclick = () => createOtherSemester();
 $('hrDlgClose').onclick = () => $('hrDlg').close();
 $('hrFile').addEventListener('change', async e => {
   const f = e.target.files[0];
@@ -730,6 +740,10 @@ function renderHrControls() {
     return `<option value="${c}">${a} · ${t('hrSemLbl')} ${s}</option>`;
   }).join('');
   $('hrSem').value = state.hr.sel;
+  // Backup and create buttons follow the selected semester.
+  const curSem = Number(state.hr.sel.split('|')[1]);
+  $('hrBk').textContent = t('hrBk').replaceAll('{s}', curSem);
+  $('hrMk').textContent = t('hrMk').replaceAll('{s}', curSem === 1 ? 2 : 1);
 }
 
 function renderHomeroom() {
@@ -953,6 +967,71 @@ async function importHomeroom(file) {
   await loadHomeroom();
   render();
   toast(`${t('hrImported')}: ${payload.length}`);
+}
+
+// Semester backup: download the selected semester's classes and duty hours as Excel,
+// then clear that semester's duty hours. The class list (who teaches which class) stays.
+async function backupHomeroom() {
+  if (guardWrite()) return;
+  const [ay, semStr] = state.hr.sel.split('|');
+  const sem = Number(semStr);
+  const rows = state.hr.rows.filter(r => hrCombo(r) === state.hr.sel)
+    .sort((a, b) => gradeKey(a.grade) - gradeKey(b.grade) || a.grade.localeCompare(b.grade));
+  if (!rows.length) return toast(t('hrBkEmpty'));
+
+  const data = rows.map((r, i) => {
+    const d = state.hr.duty[`${hrCombo(r)}|${teacherKey(r.name_en)}`] || { n: 0, byDay: {} };
+    const line = {
+      '#': i + 1,
+      'ថ្នាក់': r.grade,
+      'ឈ្មោះ (EN)': r.name_en,
+      'ឈ្មោះ (KM)': r.name_km || '',
+      'មុខវិជ្ជា': r.subject || '',
+      'លេខទូរស័ព្ទ': r.phone || ''
+    };
+    TT_DAYS.forEach((day, j) => {
+      const p = d.byDay[day];
+      line[TT_UI_DAYS[j]] = p ? TT_UI_PERIODS[p - 1] : '';
+    });
+    line['ម៉ោងសរុប'] = d.n;
+    return line;
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), `S${sem}`);
+  XLSX.writeFile(wb, `homeroom-${ay}-S${sem}-${todayStr()}.xlsx`);
+
+  if (!confirm(t('hrBkConfirm').replaceAll('{s}', sem))) return;
+  const del = await sb.from('homeroom_duty').delete()
+    .eq('academic_year', ay).eq('semester', sem);
+  if (del.error) return fail(del.error);
+  await loadHrDuty();
+  render();
+  toast(t('hrBkDone').replaceAll('{s}', sem));
+}
+
+// Creates the other semester of the same academic year by copying the selected semester's class list.
+// Duty hours are not copied, so the new semester starts with no hours.
+async function createOtherSemester() {
+  if (guardWrite()) return;
+  const [ay, semStr] = state.hr.sel.split('|');
+  const from = Number(semStr);
+  const to = from === 1 ? 2 : 1;
+  const target = `${ay}|${to}`;
+  if (state.hr.rows.some(r => hrCombo(r) === target)) return toast(t('hrMkExists').replaceAll('{s}', to));
+  const src = state.hr.rows.filter(r => hrCombo(r) === state.hr.sel);
+  if (!src.length) return toast(t('hrBkEmpty'));
+  if (!confirm(t('hrMkConfirm').replaceAll('{s}', to).replaceAll('{o}', from))) return;
+
+  const payload = src.map(r => ({
+    academic_year: ay, semester: to, campus: r.campus, grade: r.grade,
+    name_en: r.name_en, name_km: r.name_km, subject: r.subject, remark: r.remark, phone: r.phone
+  }));
+  const ins = await sb.from('homeroom_assignments').insert(payload);
+  if (ins.error) return fail(ins.error);
+  state.hr.sel = target;
+  await loadHomeroom();
+  render();
+  toast(t('hrMkDone').replaceAll('{s}', to).replaceAll('{n}', payload.length));
 }
 
 // ---- Roles: admin (full) and viewer (read-only, UI level) ----
