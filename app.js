@@ -298,7 +298,6 @@ async function loadAll() {
   }
   state.settings = s.data || {};
   state.teachers = tc.data || [];
-  $('dueDate').value = state.settings.due_date || '';
   renderQuarters();
   $('calcDate').value = todayStr();
   setCloud('ok');
@@ -405,29 +404,31 @@ function renderQuarters() {
   });
 }
 
+// Sets the due date for all teachers (clears each teacher's own date first).
+// quarters: optional new quarter map to save with it.
+async function applyDueDate(due, quarters) {
+  if (guardWrite()) return;
+  const { error } = await sb.from('teachers').update({ due_date: null }).not('id', 'is', null);
+  if (error) return fail(error);
+  await saveSetting(quarters ? { due_date: due, quarters } : { due_date: due });
+}
+
 [1, 2, 3, 4].forEach(n => {
-  // Changing a quarter date saves it (admin only).
+  // Picking a quarter date saves it and applies it to all teachers (admin only).
   $('qDate' + n).addEventListener('change', e => {
     if (guardWrite()) { renderQuarters(); return; }
-    const quarters = { ...(state.settings.quarters || {}), [n]: e.target.value || null };
-    saveSetting({ quarters });
+    const date = e.target.value || null;
+    const quarters = { ...(state.settings.quarters || {}), [n]: date };
+    if (date) applyDueDate(date, quarters);
+    else saveSetting({ quarters });
   });
-  // Clicking a quarter button sets the due date to that quarter's date and applies it to all teachers.
+  // Clicking a quarter label applies that quarter's saved date to all teachers.
   document.querySelector(`[data-q="${n}"]`).addEventListener('click', () => {
     const date = (state.settings.quarters || {})[n];
     if (!date) return toast(t('qNone'));
-    $('dueDate').value = date;
-    $('applyDue').click();
+    applyDueDate(date);
   });
 });
-
-$('applyDue').onclick = async () => {
-  if (guardWrite()) return;
-  const due = $('dueDate').value || null;
-  const { error } = await sb.from('teachers').update({ due_date: null }).not('id', 'is', null);
-  if (error) return fail(error);
-  await saveSetting({ due_date: due });
-};
 
 // The calculation date is always the device's date, so it is not saved or editable.
 // Refresh it if the page stays open past midnight.
@@ -933,7 +934,6 @@ async function importHomeroom(file) {
 function setRole(r) {
   state.role = r;
   document.body.classList.toggle('viewer', r === 'viewer');
-  $('dueDate').disabled = r === 'viewer';
 }
 
 // Returns true (and shows a message) when the current user may not change data.
