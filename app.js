@@ -395,7 +395,7 @@ document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { stat
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { state.view = b.dataset.view; render(); });
 $('search').oninput = e => { state.search = e.target.value; render(); };
 $('sort').onchange = e => { state.sort = e.target.value; render(); };
-$('hrSem').onchange = e => { state.hr.sel = e.target.value; render(); };
+$('hrSem').onchange = e => { state.hr.sel = e.target.value; updateHrButtons(); render(); };
 $('hrBk').onclick = () => backupHomeroom();
 $('hrMk').onclick = () => createOtherSemester();
 $('hrDlgClose').onclick = () => $('hrDlg').close();
@@ -740,7 +740,11 @@ function renderHrControls() {
     return `<option value="${c}">${a} · ${t('hrSemLbl')} ${s}</option>`;
   }).join('');
   $('hrSem').value = state.hr.sel;
-  // Backup and create buttons follow the selected semester.
+  updateHrButtons();
+}
+
+// Backup and create buttons follow the selected semester (called whenever the selection changes).
+function updateHrButtons() {
   const curSem = Number(state.hr.sel.split('|')[1]);
   $('hrBk').textContent = t('hrBk').replaceAll('{s}', curSem);
   $('hrMk').textContent = t('hrMk').replaceAll('{s}', curSem === 1 ? 2 : 1);
