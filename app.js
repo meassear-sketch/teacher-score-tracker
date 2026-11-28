@@ -34,6 +34,8 @@ const STR = {
     hrNone: 'មិនមានទិន្នន័យគ្រូបន្ទុកថ្នាក់', hrError: 'ទាញទិន្នន័យគ្រូបន្ទុកថ្នាក់មិនបាន (ពិនិត្យ database)',
     hrClass: 'ថ្នាក់', hrTeacherEn: 'គ្រូបន្ទុក (EN)', hrTeacherKm: 'គ្រូបន្ទុក (ខ្មែរ)', hrCount: 'ចំនួនថ្នាក់',
     phone: 'លេខទូរស័ព្ទ',
+    qRowLbl: 'ត្រីមាស (ថ្ងៃកំណត់)', qLabel1: 'ត្រីមាសទី១', qLabel2: 'ត្រីមាសទី២', qLabel3: 'ត្រីមាសទី៣', qLabel4: 'ត្រីមាសទី៤',
+    qNone: 'សូមកំណត់ថ្ងៃសម្រាប់ត្រីមាសនេះជាមុនសិន',
     ttTotal: 'ម៉ោងសរុប', ttNone: 'មិនមានកាលវិភាគសម្រាប់គ្រូនេះ', ttImported: 'នាំចូលកាលវិភាគ',
     ttSave: 'រក្សាទុកម៉ោង', ttSaved: 'បានរក្សាទុកម៉ោងការងារបន្ទុកថ្នាក់',
     hrEdSave: 'រក្សាទុកព័ត៌មាន', hrEdSaved: 'បានរក្សាទុកព័ត៌មានគ្រូ', hrEdNameReq: 'សូមបញ្ចូលឈ្មោះគ្រូ (EN)', hrEdNoRow: 'មិនអាចរក្សាទុកបាន',
@@ -75,6 +77,8 @@ const STR = {
     hrNone: 'No homeroom data yet', hrError: 'Could not load homeroom data (check database)',
     hrClass: 'Class', hrTeacherEn: 'Homeroom teacher (EN)', hrTeacherKm: 'Homeroom teacher (Khmer)', hrCount: 'Classes',
     phone: 'Phone',
+    qRowLbl: 'Quarters (due date)', qLabel1: 'Quarter 1', qLabel2: 'Quarter 2', qLabel3: 'Quarter 3', qLabel4: 'Quarter 4',
+    qNone: 'Set a date for this quarter first',
     ttTotal: 'Total hours', ttNone: 'No timetable for this teacher', ttImported: 'Timetable imported',
     ttSave: 'Save hours', ttSaved: 'Homeroom duty hours saved',
     hrEdSave: 'Save details', hrEdSaved: 'Teacher details saved', hrEdNameReq: 'Please enter the teacher name (EN)', hrEdNoRow: 'Could not save',
@@ -295,6 +299,7 @@ async function loadAll() {
   state.settings = s.data || {};
   state.teachers = tc.data || [];
   $('dueDate').value = state.settings.due_date || '';
+  renderQuarters();
   $('calcDate').value = todayStr();
   setCloud('ok');
   await loadHomeroom();
@@ -387,6 +392,33 @@ $('hrFile').addEventListener('change', async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (f) await importHomeroom(f);
+});
+
+// Quarter dates (set by admin) are stored in app_settings.quarters, so every user sees the same ones.
+function renderQuarters() {
+  const q = state.settings.quarters || {};
+  [1, 2, 3, 4].forEach(n => {
+    const input = $('qDate' + n);
+    input.value = q[n] || '';
+    input.disabled = state.role === 'viewer';
+    document.querySelector(`[data-q="${n}"]`).disabled = state.role === 'viewer';
+  });
+}
+
+[1, 2, 3, 4].forEach(n => {
+  // Changing a quarter date saves it (admin only).
+  $('qDate' + n).addEventListener('change', e => {
+    if (guardWrite()) { renderQuarters(); return; }
+    const quarters = { ...(state.settings.quarters || {}), [n]: e.target.value || null };
+    saveSetting({ quarters });
+  });
+  // Clicking a quarter button sets the due date to that quarter's date and applies it to all teachers.
+  document.querySelector(`[data-q="${n}"]`).addEventListener('click', () => {
+    const date = (state.settings.quarters || {})[n];
+    if (!date) return toast(t('qNone'));
+    $('dueDate').value = date;
+    $('applyDue').click();
+  });
 });
 
 $('applyDue').onclick = async () => {

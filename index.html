@@ -104,6 +104,10 @@ table.tt td:last-child{width:100%}
 .duty-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .duty-actions .btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .duty-del{color:#dc2626;border-color:#dc2626}
+.q-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}
+.q-label{font-size:13px;color:var(--muted);font-weight:600;align-self:center}
+.q-item{display:flex;flex-direction:column;gap:5px}
+.q-item input{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:14px;background:var(--card);color:inherit}
 .view-banner{width:100%;padding:6px;margin-top:8px;justify-content:center;background:#4f46e5;border-radius:12px;overflow:hidden}
 .view-banner img{display:block;width:100%;height:auto}
 .duty-slot{display:inline-flex;align-items:center;gap:6px;background:#fef9c3;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;white-space:nowrap}
@@ -161,6 +165,13 @@ table.hr-duty thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-sh
 </header>
 
 <section class="card" style="margin-top:16px">
+  <div class="q-row" id="qRow">
+    <span class="q-label" data-i18n="qRowLbl"></span>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="1" data-i18n="qLabel1"></button><input type="date" id="qDate1" data-qd="1" /></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="2" data-i18n="qLabel2"></button><input type="date" id="qDate2" data-qd="2" /></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="3" data-i18n="qLabel3"></button><input type="date" id="qDate3" data-qd="3" /></div>
+    <div class="q-item"><button class="btn ghost sm" type="button" data-q="4" data-i18n="qLabel4"></button><input type="date" id="qDate4" data-qd="4" /></div>
+  </div>
   <div class="toolbar" style="margin:0">
     <div class="actions">
       <div class="field"><label data-i18n="dueLabel"></label><input type="date" id="dueDate" /></div>
